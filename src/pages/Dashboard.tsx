@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, FileText, Users, ShoppingCart, AlertTriangle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Package, FileText, Users, ShoppingCart } from "lucide-react";
+import { LowStockAlerts } from "@/components/LowStockAlerts";
 
 export default function Dashboard() {
   const { data: products } = useQuery({
@@ -40,10 +40,6 @@ export default function Dashboard() {
       return data;
     },
   });
-
-  const lowStockProducts = products?.filter(
-    (product) => product.quantity_in_stock <= product.threshold
-  ) || [];
 
   const totalValue = products?.reduce(
     (sum, product) => sum + (product.quantity_in_stock * Number(product.unit_price)),
@@ -84,6 +80,8 @@ export default function Dashboard() {
         <p className="text-muted-foreground">Overview of your inventory system</p>
       </div>
 
+      <LowStockAlerts />
+
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
@@ -113,25 +111,6 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Low Stock Alert */}
-      {lowStockProducts.length > 0 && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Low Stock Alert</AlertTitle>
-          <AlertDescription>
-            {lowStockProducts.length} product(s) are running low on stock:
-            <ul className="mt-2 space-y-1">
-              {lowStockProducts.map((product) => (
-                <li key={product.id}>
-                  <strong>{product.name}</strong>: {product.quantity_in_stock} units
-                  (threshold: {product.threshold})
-                </li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 }

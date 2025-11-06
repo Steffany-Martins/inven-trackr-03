@@ -7,12 +7,17 @@ import { useState } from "react";
 import { ProductForm } from "@/components/ProductForm";
 import { ProductsTable } from "@/components/ProductsTable";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Products() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const { toast } = useToast();
+  const { userRole } = useAuth();
   const queryClient = useQueryClient();
+
+  const canEdit = userRole === "manager" || userRole === "supervisor";
+  const canDelete = userRole === "manager";
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],
@@ -41,11 +46,19 @@ export default function Products() {
   });
 
   const handleEdit = (product: any) => {
+    if (!canEdit) {
+      toast({ title: "Access denied", description: "You don't have permission to edit products", variant: "destructive" });
+      return;
+    }
     setEditingProduct(product);
     setIsFormOpen(true);
   };
 
   const handleDelete = (id: string) => {
+    if (!canDelete) {
+      toast({ title: "Access denied", description: "Only managers can delete products", variant: "destructive" });
+      return;
+    }
     if (confirm("Are you sure you want to delete this product?")) {
       deleteMutation.mutate(id);
     }
@@ -63,10 +76,12 @@ export default function Products() {
           <h1 className="text-3xl font-bold tracking-tight">Products</h1>
           <p className="text-muted-foreground">Manage your inventory items</p>
         </div>
-        <Button onClick={() => setIsFormOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Product
-        </Button>
+        {canEdit && (
+          <Button onClick={() => setIsFormOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Product
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -77,8 +92,8 @@ export default function Products() {
           <ProductsTable
             products={products || []}
             isLoading={isLoading}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
+            onEdit={canEdit ? handleEdit : undefined}
+            onDelete={canDelete ? handleDelete : undefined}
           />
         </CardContent>
       </Card>

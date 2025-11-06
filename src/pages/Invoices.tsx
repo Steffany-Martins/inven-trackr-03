@@ -6,9 +6,13 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { InvoiceForm } from "@/components/InvoiceForm";
 import { InvoicesTable } from "@/components/InvoicesTable";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Invoices() {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const { userRole } = useAuth();
+
+  const canEdit = userRole === "manager" || userRole === "supervisor";
 
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["invoices"],
@@ -35,10 +39,12 @@ export default function Invoices() {
           <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
           <p className="text-muted-foreground">Manage customer invoices</p>
         </div>
-        <Button onClick={() => setIsFormOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Invoice
-        </Button>
+        {canEdit && (
+          <Button onClick={() => setIsFormOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Invoice
+          </Button>
+        )}
       </div>
 
       <Card>
