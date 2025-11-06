@@ -14,11 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Database } from "@/integrations/supabase/types";
+
+type DeliveryStatus = Database["public"]["Enums"]["delivery_status"];
 
 interface PurchaseOrdersTableProps {
   orders: any[];
   isLoading: boolean;
-  onUpdateStatus: (id: string, status: string) => void;
+  onUpdateStatus: (id: string, status: DeliveryStatus) => void;
 }
 
 export function PurchaseOrdersTable({
@@ -76,7 +79,7 @@ export function PurchaseOrdersTable({
             <TableCell>
               <Select
                 value={order.delivery_status}
-                onValueChange={(value) => onUpdateStatus(order.id, value)}
+                onValueChange={(value) => onUpdateStatus(order.id, value as DeliveryStatus)}
               >
                 <SelectTrigger className="w-[140px]">
                   <SelectValue>
