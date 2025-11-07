@@ -1,10 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, FileText, Users, ShoppingCart } from "lucide-react";
+import { Package, FileText, Users, ShoppingCart, AlertTriangle, Calendar, TrendingUp } from "lucide-react";
 import { LowStockAlerts } from "@/components/LowStockAlerts";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
+  const { t } = useTranslation();
+
   const { data: products } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
@@ -41,43 +45,55 @@ export default function Dashboard() {
     },
   });
 
-  const totalValue = products?.reduce(
-    (sum, product) => sum + (product.quantity_in_stock * Number(product.unit_price)),
-    0
-  ) || 0;
+  const lowStockCount = products?.filter(p => p.quantity_in_stock < p.threshold).length || 0;
+  
+  const expiringItems = products?.filter(p => {
+    if (!p.expiration_date) return false;
+    const daysUntilExpiry = Math.floor(
+      (new Date(p.expiration_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+    );
+    return daysUntilExpiry <= 30 && daysUntilExpiry >= 0;
+  }).length || 0;
+
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const monthlySales = invoices?.filter(invoice => {
+    const invoiceDate = new Date(invoice.created_at);
+    return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
+  }).reduce((sum, invoice) => sum + Number(invoice.total_amount), 0) || 0;
 
   const stats = [
     {
-      title: "Total Products",
+      title: t("dashboard.totalProducts"),
       value: products?.length || 0,
       icon: Package,
       color: "text-primary",
     },
     {
-      title: "Total Invoices",
-      value: invoices?.length || 0,
-      icon: FileText,
-      color: "text-success",
-    },
-    {
-      title: "Suppliers",
-      value: suppliers?.length || 0,
-      icon: Users,
-      color: "text-accent",
-    },
-    {
-      title: "Purchase Orders",
-      value: purchaseOrders?.length || 0,
-      icon: ShoppingCart,
+      title: t("dashboard.lowStockItems"),
+      value: lowStockCount,
+      icon: AlertTriangle,
       color: "text-warning",
+    },
+    {
+      title: t("dashboard.expiringItems"),
+      value: expiringItems,
+      icon: Calendar,
+      color: "text-destructive",
+    },
+    {
+      title: t("dashboard.monthlySales"),
+      value: `$${monthlySales.toFixed(2)}`,
+      icon: TrendingUp,
+      color: "text-success",
     },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Overview of your inventory system</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("dashboard.title")}</h1>
+        <p className="text-muted-foreground">{t("dashboard.description")}</p>
       </div>
 
       <LowStockAlerts />
@@ -99,22 +115,6 @@ export default function Dashboard() {
           );
         })}
       </div>
-
-      {/* Inventory Value */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Total Inventory Value</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-primary">
-            ${totalValue.toFixed(2)}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
-}
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
 }

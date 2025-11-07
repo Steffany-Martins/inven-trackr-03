@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, TrendingUp } from "lucide-react";
+import { Sparkles, TrendingUp, AlertTriangle, Calendar, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 export default function Insights() {
   const [insights, setInsights] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const { data: products } = useQuery({
     queryKey: ["products"],
@@ -72,8 +75,8 @@ export default function Insights() {
 
       setInsights(data.insights);
       toast({
-        title: "Insights generated successfully",
-        description: "AI analysis complete",
+        title: t("insights.title") + " gerados com sucesso",
+        description: t("insights.aiAnalysis"),
       });
     } catch (error: any) {
       console.error("Error generating insights:", error);
@@ -91,14 +94,12 @@ export default function Insights() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">AI Insights</h1>
-          <p className="text-muted-foreground">
-            AI-powered inventory analysis and recommendations
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("insights.title")}</h1>
+          <p className="text-muted-foreground">{t("insights.description")}</p>
         </div>
         <Button onClick={generateInsights} disabled={isGenerating}>
           <Sparkles className="mr-2 h-4 w-4" />
-          {isGenerating ? "Generating..." : "Generate Insights"}
+          {isGenerating ? t("insights.generating") : t("insights.generateInsights")}
         </Button>
       </div>
 

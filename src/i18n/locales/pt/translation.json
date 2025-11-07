@@ -1,0 +1,141 @@
+{
+  "common": {
+    "dashboard": "Painel",
+    "products": "Produtos",
+    "invoices": "Faturas",
+    "suppliers": "Fornecedores",
+    "orders": "Pedidos",
+    "insights": "Insights",
+    "users": "Usuários",
+    "profile": "Perfil",
+    "logout": "Sair",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "export": "Exportar",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "add": "Adicionar",
+    "actions": "Ações",
+    "loading": "Carregando...",
+    "noData": "Nenhum dado disponível",
+    "all": "Todos"
+  },
+  "auth": {
+    "login": "Entrar",
+    "signup": "Cadastrar",
+    "email": "E-mail",
+    "password": "Senha",
+    "fullName": "Nome Completo",
+    "alreadyHaveAccount": "Já tem uma conta?",
+    "dontHaveAccount": "Não tem uma conta?",
+    "welcome": "Bem-vindo ao Sistema de Inventário",
+    "loginDescription": "Entre com suas credenciais para acessar o sistema",
+    "signupDescription": "Crie uma nova conta para começar"
+  },
+  "dashboard": {
+    "title": "Painel",
+    "description": "Visão geral do seu inventário",
+    "totalProducts": "Total de Produtos",
+    "lowStockItems": "Itens com Baixo Estoque",
+    "expiringItems": "Próximos ao Vencimento",
+    "monthlySales": "Vendas do Mês",
+    "recentActivity": "Atividade Recente"
+  },
+  "products": {
+    "title": "Produtos",
+    "description": "Gerencie seu inventário de produtos",
+    "addProduct": "Adicionar Produto",
+    "name": "Nome",
+    "category": "Categoria",
+    "vendor": "Fornecedor",
+    "unitPrice": "Preço Unitário",
+    "quantity": "Quantidade",
+    "threshold": "Limite Mínimo",
+    "expirationDate": "Data de Validade",
+    "categories": {
+      "bakery": "Padaria",
+      "restaurant": "Restaurante",
+      "bar": "Bar"
+    }
+  },
+  "invoices": {
+    "title": "Faturas",
+    "description": "Gerencie faturas e vendas",
+    "addInvoice": "Adicionar Fatura",
+    "invoiceNumber": "Número da Fatura",
+    "customerName": "Nome do Cliente",
+    "phoneNumber": "Telefone",
+    "totalAmount": "Valor Total",
+    "taxAmount": "Imposto",
+    "shippingPrice": "Frete",
+    "items": "Itens",
+    "addItem": "Adicionar Item",
+    "itemName": "Nome do Item",
+    "pricePerItem": "Preço por Item",
+    "subtotal": "Subtotal",
+    "deductStock": "Deduzir do Estoque"
+  },
+  "suppliers": {
+    "title": "Fornecedores",
+    "description": "Gerencie seus fornecedores",
+    "addSupplier": "Adicionar Fornecedor",
+    "name": "Nome",
+    "phoneNumber": "Telefone",
+    "address": "Endereço"
+  },
+  "orders": {
+    "title": "Pedidos de Compra",
+    "description": "Gerencie pedidos de compra",
+    "addOrder": "Adicionar Pedido",
+    "product": "Produto",
+    "supplier": "Fornecedor",
+    "quantity": "Quantidade",
+    "price": "Preço",
+    "status": "Status",
+    "deliveryDate": "Data de Entrega",
+    "statuses": {
+      "pending": "Pendente",
+      "delivered": "Entregue",
+      "cancelled": "Cancelado"
+    }
+  },
+  "insights": {
+    "title": "Insights de IA",
+    "description": "Análise e recomendações baseadas em IA",
+    "generateInsights": "Gerar Insights",
+    "generating": "Gerando...",
+    "lowStockItems": "Itens com Baixo Estoque",
+    "expiringItems": "Próximos ao Vencimento",
+    "expensiveItems": "Itens Mais Caros",
+    "restockSuggestions": "Sugestões de Reposição",
+    "aiAnalysis": "Análise de IA",
+    "basedOnData": "Baseado nos dados atuais do inventário"
+  },
+  "users": {
+    "title": "Usuários",
+    "description": "Gerencie usuários e permissões",
+    "email": "E-mail",
+    "fullName": "Nome Completo",
+    "role": "Função",
+    "createdAt": "Criado em",
+    "roles": {
+      "manager": "Gerente",
+      "supervisor": "Supervisor",
+      "staff": "Equipe"
+    },
+    "changeRole": "Alterar Função"
+  },
+  "profile": {
+    "title": "Meu Perfil",
+    "description": "Gerencie suas informações pessoais",
+    "uploadPhoto": "Carregar Foto",
+    "changePhoto": "Alterar Foto",
+    "fullName": "Nome Completo",
+    "email": "E-mail",
+    "updateProfile": "Atualizar Perfil",
+    "profileUpdated": "Perfil atualizado com sucesso",
+    "photoUploaded": "Foto carregada com sucesso"
+  }
+}

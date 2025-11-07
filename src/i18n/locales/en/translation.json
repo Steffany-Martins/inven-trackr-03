@@ -1,0 +1,141 @@
+{
+  "common": {
+    "dashboard": "Dashboard",
+    "products": "Products",
+    "invoices": "Invoices",
+    "suppliers": "Suppliers",
+    "orders": "Orders",
+    "insights": "Insights",
+    "users": "Users",
+    "profile": "Profile",
+    "logout": "Logout",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "actions": "Actions",
+    "loading": "Loading...",
+    "noData": "No data available",
+    "all": "All"
+  },
+  "auth": {
+    "login": "Login",
+    "signup": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "fullName": "Full Name",
+    "alreadyHaveAccount": "Already have an account?",
+    "dontHaveAccount": "Don't have an account?",
+    "welcome": "Welcome to Inventory System",
+    "loginDescription": "Sign in with your credentials to access the system",
+    "signupDescription": "Create a new account to get started"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "description": "Overview of your inventory",
+    "totalProducts": "Total Products",
+    "lowStockItems": "Low Stock Items",
+    "expiringItems": "Expiring Soon",
+    "monthlySales": "Monthly Sales",
+    "recentActivity": "Recent Activity"
+  },
+  "products": {
+    "title": "Products",
+    "description": "Manage your product inventory",
+    "addProduct": "Add Product",
+    "name": "Name",
+    "category": "Category",
+    "vendor": "Vendor",
+    "unitPrice": "Unit Price",
+    "quantity": "Quantity",
+    "threshold": "Minimum Threshold",
+    "expirationDate": "Expiration Date",
+    "categories": {
+      "bakery": "Bakery",
+      "restaurant": "Restaurant",
+      "bar": "Bar"
+    }
+  },
+  "invoices": {
+    "title": "Invoices",
+    "description": "Manage invoices and sales",
+    "addInvoice": "Add Invoice",
+    "invoiceNumber": "Invoice Number",
+    "customerName": "Customer Name",
+    "phoneNumber": "Phone Number",
+    "totalAmount": "Total Amount",
+    "taxAmount": "Tax",
+    "shippingPrice": "Shipping",
+    "items": "Items",
+    "addItem": "Add Item",
+    "itemName": "Item Name",
+    "pricePerItem": "Price per Item",
+    "subtotal": "Subtotal",
+    "deductStock": "Deduct from Stock"
+  },
+  "suppliers": {
+    "title": "Suppliers",
+    "description": "Manage your suppliers",
+    "addSupplier": "Add Supplier",
+    "name": "Name",
+    "phoneNumber": "Phone Number",
+    "address": "Address"
+  },
+  "orders": {
+    "title": "Purchase Orders",
+    "description": "Manage purchase orders",
+    "addOrder": "Add Order",
+    "product": "Product",
+    "supplier": "Supplier",
+    "quantity": "Quantity",
+    "price": "Price",
+    "status": "Status",
+    "deliveryDate": "Delivery Date",
+    "statuses": {
+      "pending": "Pending",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    }
+  },
+  "insights": {
+    "title": "AI Insights",
+    "description": "AI-powered analysis and recommendations",
+    "generateInsights": "Generate Insights",
+    "generating": "Generating...",
+    "lowStockItems": "Low Stock Items",
+    "expiringItems": "Expiring Soon",
+    "expensiveItems": "Most Expensive Items",
+    "restockSuggestions": "Restock Suggestions",
+    "aiAnalysis": "AI Analysis",
+    "basedOnData": "Based on current inventory data"
+  },
+  "users": {
+    "title": "Users",
+    "description": "Manage users and permissions",
+    "email": "Email",
+    "fullName": "Full Name",
+    "role": "Role",
+    "createdAt": "Created At",
+    "roles": {
+      "manager": "Manager",
+      "supervisor": "Supervisor",
+      "staff": "Staff"
+    },
+    "changeRole": "Change Role"
+  },
+  "profile": {
+    "title": "My Profile",
+    "description": "Manage your personal information",
+    "uploadPhoto": "Upload Photo",
+    "changePhoto": "Change Photo",
+    "fullName": "Full Name",
+    "email": "Email",
+    "updateProfile": "Update Profile",
+    "profileUpdated": "Profile updated successfully",
+    "photoUploaded": "Photo uploaded successfully"
+  }
+}

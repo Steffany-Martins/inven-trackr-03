@@ -1,6 +1,7 @@
 import { useForm, useFieldArray } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -26,6 +28,7 @@ interface InvoiceFormProps {
 
 export function InvoiceForm({ onClose }: InvoiceFormProps) {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   const { data: products } = useQuery({
@@ -37,13 +40,13 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
     },
   });
 
-  const { register, handleSubmit, control, watch } = useForm({
+  const { register, handleSubmit, control, watch, setValue } = useForm({
     defaultValues: {
       customer_name: "",
       phone_number: "",
       shipping_price: "0",
       tax_amount: "0",
-      items: [{ product_id: "", quantity: "1", price_per_item: "0" }],
+      items: [{ product_id: "", item_name: "", quantity: "1", price_per_item: "0", deduct_stock: true }],
     },
   });
 
@@ -66,10 +69,8 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
-      // Generate invoice number
       const invoiceNumber = `INV-${Date.now()}`;
 
-      // Create invoice
       const { data: invoice, error: invoiceError } = await supabase
         .from("invoices")
         .insert([
@@ -87,45 +88,73 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
 
       if (invoiceError) throw invoiceError;
 
-      // Create invoice items
-      const items = data.items.map((item: any) => {
-        const product = products?.find((p) => p.id === item.product_id);
-        return {
-          invoice_id: invoice.id,
-          product_id: item.product_id,
-          item_name: product?.name || "",
-          quantity: parseInt(item.quantity),
-          price_per_item: parseFloat(item.price_per_item),
-          subtotal: parseInt(item.quantity) * parseFloat(item.price_per_item),
-        };
-      });
-
-      const { error: itemsError } = await supabase
-        .from("invoice_items")
-        .insert(items);
-
-      if (itemsError) throw itemsError;
-
-      // Update product quantities
+      // Process each item
       for (const item of data.items) {
-        const product = products?.find((p) => p.id === item.product_id);
-        if (product) {
-          const newQuantity = product.quantity_in_stock - parseInt(item.quantity);
-          await supabase
+        let productId = item.product_id;
+        let itemName = item.item_name;
+
+        // If product_id is empty, create new product
+        if (!productId && itemName) {
+          const { data: newProduct, error: productError } = await supabase
             .from("products")
-            .update({ quantity_in_stock: newQuantity })
-            .eq("id", item.product_id);
+            .insert([
+              {
+                name: itemName,
+                category: "restaurante",
+                vendor_name: "N/A",
+                unit_price: parseFloat(item.price_per_item),
+                quantity_in_stock: 0,
+                threshold: 10,
+              },
+            ])
+            .select()
+            .single();
+
+          if (productError) throw productError;
+          productId = newProduct.id;
+        }
+
+        // Create invoice item
+        const { error: itemError } = await supabase
+          .from("invoice_items")
+          .insert([
+            {
+              invoice_id: invoice.id,
+              product_id: productId,
+              item_name: itemName || products?.find(p => p.id === productId)?.name || "",
+              quantity: parseInt(item.quantity),
+              price_per_item: parseFloat(item.price_per_item),
+              subtotal: parseInt(item.quantity) * parseFloat(item.price_per_item),
+            },
+          ]);
+
+        if (itemError) throw itemError;
+
+        // Deduct stock if checkbox is checked
+        if (item.deduct_stock && productId) {
+          const product = products?.find(p => p.id === productId);
+          if (product) {
+            const newQuantity = product.quantity_in_stock - parseInt(item.quantity);
+            await supabase
+              .from("products")
+              .update({ quantity_in_stock: Math.max(0, newQuantity) })
+              .eq("id", productId);
+          }
         }
       }
     },
     onSuccess: () => {
-      toast({ title: "Invoice created successfully" });
+      toast({ title: t("invoices.title") + " created successfully" });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       onClose();
     },
-    onError: () => {
-      toast({ title: "Failed to create invoice", variant: "destructive" });
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to create invoice", 
+        description: error.message,
+        variant: "destructive" 
+      });
     },
   });
 
@@ -137,62 +166,61 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Invoice</DialogTitle>
+          <DialogTitle>{t("invoices.addInvoice")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="customer_name">Customer Name</Label>
+              <Label htmlFor="customer_name">{t("invoices.customerName")}</Label>
               <Input
                 id="customer_name"
                 {...register("customer_name", { required: true })}
-                placeholder="Enter customer name"
+                placeholder={t("invoices.customerName")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone_number">Phone Number</Label>
+              <Label htmlFor="phone_number">{t("invoices.phoneNumber")}</Label>
               <Input
                 id="phone_number"
                 {...register("phone_number", { required: true })}
-                placeholder="Enter phone number"
+                placeholder={t("invoices.phoneNumber")}
               />
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>Invoice Items</Label>
+              <Label>{t("invoices.items")}</Label>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  append({ product_id: "", quantity: "1", price_per_item: "0" })
+                  append({ product_id: "", item_name: "", quantity: "1", price_per_item: "0", deduct_stock: true })
                 }
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Item
+                {t("invoices.addItem")}
               </Button>
             </div>
 
             {fields.map((field, index) => (
-              <div key={field.id} className="flex gap-2 items-end">
+              <div key={field.id} className="flex gap-2 items-end border p-3 rounded-lg">
                 <div className="flex-1 space-y-2">
-                  <Label>Product</Label>
+                  <Label>{t("products.name")}</Label>
                   <Select
                     onValueChange={(value) => {
+                      setValue(`items.${index}.product_id`, value);
                       const product = products?.find((p) => p.id === value);
                       if (product) {
-                        const input = document.getElementById(
-                          `items.${index}.price_per_item`
-                        ) as HTMLInputElement;
-                        if (input) input.value = String(product.unit_price);
+                        setValue(`items.${index}.item_name`, product.name);
+                        setValue(`items.${index}.price_per_item`, String(product.unit_price));
                       }
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select product" />
+                      <SelectValue placeholder="Selecionar produto existente" />
                     </SelectTrigger>
                     <SelectContent>
                       {products?.map((product) => (
@@ -202,11 +230,14 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <input type="hidden" {...register(`items.${index}.product_id`)} />
+                  <Input
+                    {...register(`items.${index}.item_name`)}
+                    placeholder="Ou digite nome do novo produto"
+                  />
                 </div>
 
                 <div className="w-24 space-y-2">
-                  <Label>Quantity</Label>
+                  <Label>{t("invoices.quantity")}</Label>
                   <Input
                     type="number"
                     {...register(`items.${index}.quantity`)}
@@ -215,14 +246,26 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
                 </div>
 
                 <div className="w-32 space-y-2">
-                  <Label>Price</Label>
+                  <Label>{t("invoices.pricePerItem")}</Label>
                   <Input
-                    id={`items.${index}.price_per_item`}
                     type="number"
                     step="0.01"
                     {...register(`items.${index}.price_per_item`)}
                     placeholder="0.00"
                   />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`deduct-${index}`}
+                    checked={watchItems[index]?.deduct_stock}
+                    onCheckedChange={(checked) => 
+                      setValue(`items.${index}.deduct_stock`, checked as boolean)
+                    }
+                  />
+                  <Label htmlFor={`deduct-${index}`} className="text-xs whitespace-nowrap">
+                    {t("invoices.deductStock")}
+                  </Label>
                 </div>
 
                 <Button
@@ -240,7 +283,7 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="shipping_price">Shipping ($)</Label>
+              <Label htmlFor="shipping_price">{t("invoices.shippingPrice")} ($)</Label>
               <Input
                 id="shipping_price"
                 type="number"
@@ -251,7 +294,7 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tax_amount">Tax ($)</Label>
+              <Label htmlFor="tax_amount">{t("invoices.taxAmount")} ($)</Label>
               <Input
                 id="tax_amount"
                 type="number"
@@ -262,7 +305,7 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Total Amount</Label>
+              <Label>{t("invoices.totalAmount")}</Label>
               <div className="text-2xl font-bold text-primary">
                 ${total.toFixed(2)}
               </div>
@@ -271,10 +314,10 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Creating..." : "Create Invoice"}
+              {mutation.isPending ? "Creating..." : t("common.save")}
             </Button>
           </div>
         </form>
