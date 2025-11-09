@@ -123,7 +123,8 @@
     "roles": {
       "manager": "Gerente",
       "supervisor": "Supervisor",
-      "staff": "Equipe"
+      "staff": "Equipe",
+      "pending": "Pendente"
     },
     "changeRole": "Alterar Função"
   },

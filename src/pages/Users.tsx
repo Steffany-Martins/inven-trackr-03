@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 
-type UserRole = "manager" | "supervisor" | "staff";
+type UserRole = "manager" | "supervisor" | "staff" | "pending";
 
 interface UserWithRole {
   id: string;
@@ -67,7 +67,7 @@ export default function Users() {
         const userRole = roles.find((r) => r.user_id === profile.id);
         return {
           ...profile,
-          role: (userRole?.role as UserRole) || "staff",
+          role: (userRole?.role as UserRole) || "pending" as UserRole,
         };
       });
 
@@ -75,11 +75,13 @@ export default function Users() {
     },
   });
 
+  const pendingUsers = users?.filter((u) => u.role === "pending");
+
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, newRole }: { userId: string; newRole: UserRole }) => {
       const { error } = await supabase
         .from("user_roles")
-        .update({ role: newRole })
+        .update({ role: newRole as "manager" | "supervisor" | "staff" })
         .eq("user_id", userId);
 
       if (error) throw error;
@@ -100,13 +102,15 @@ export default function Users() {
     },
   });
 
-  const getRoleBadgeVariant = (role: UserRole) => {
+  const getRoleBadgeVariant = (role: UserRole): "default" | "secondary" | "outline" | "destructive" => {
     switch (role) {
       case "manager":
         return "default";
       case "supervisor":
         return "secondary";
       case "staff":
+        return "outline";
+      case "pending":
         return "outline";
     }
   };
@@ -117,6 +121,58 @@ export default function Users() {
         <h1 className="text-3xl font-bold tracking-tight">{t("users.title")}</h1>
         <p className="text-muted-foreground">{t("users.description")}</p>
       </div>
+
+      {pendingUsers && pendingUsers.length > 0 && (
+        <Card className="border-warning">
+          <CardHeader>
+            <CardTitle>Usuários Pendentes de Aprovação</CardTitle>
+            <CardDescription>
+              {pendingUsers.length} usuário(s) aguardando aprovação
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {pendingUsers.map((u) => (
+                <div key={u.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarImage src={u.avatar_url || undefined} />
+                      <AvatarFallback>
+                        {u.full_name?.charAt(0) || u.email.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{u.full_name || "Sem nome"}</p>
+                      <p className="text-sm text-muted-foreground">{u.email}</p>
+                    </div>
+                  </div>
+                  <Select
+                    value="pending"
+                    onValueChange={(value: UserRole) =>
+                      updateRoleMutation.mutate({ userId: u.id, newRole: value })
+                    }
+                  >
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Aprovar como..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manager">
+                        {t("users.roles.manager")}
+                      </SelectItem>
+                      <SelectItem value="supervisor">
+                        {t("users.roles.supervisor")}
+                      </SelectItem>
+                      <SelectItem value="staff">
+                        {t("users.roles.staff")}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

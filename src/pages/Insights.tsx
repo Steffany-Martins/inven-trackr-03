@@ -1,18 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, TrendingUp, AlertTriangle, Calendar, DollarSign } from "lucide-react";
+import { Sparkles, TrendingUp, AlertTriangle, Calendar, DollarSign, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 
 export default function Insights() {
   const [insights, setInsights] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [cmvData, setCmvData] = useState<any>(null);
   const { toast } = useToast();
   const { t } = useTranslation();
+
+  const currentMonth = new Date();
+  const lastMonth = subMonths(currentMonth, 1);
 
   const { data: products } = useQuery({
     queryKey: ["products"],
@@ -48,6 +53,64 @@ export default function Insights() {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: lowStockAlerts } = useQuery({
+    queryKey: ["low_stock_alerts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("low_stock_alerts")
+        .select("*, products(name, unit_price)")
+        .eq("resolved", false)
+        .order("severity", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: fraudAlerts } = useQuery({
+    queryKey: ["fraud_alerts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("fraud_alerts")
+        .select("*")
+        .eq("resolved", false)
+        .order("severity", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    calculateCMV();
+  }, [products, purchaseOrders]);
+
+  const calculateCMV = async () => {
+    try {
+      const startDate = format(startOfMonth(lastMonth), "yyyy-MM-dd");
+      const endDate = format(endOfMonth(lastMonth), "yyyy-MM-dd");
+
+      const { data, error } = await supabase.rpc("calculate_cmv", {
+        start_date: startDate,
+        end_date: endDate,
+      });
+
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setCmvData(data[0]);
+      }
+    } catch (error) {
+      console.error("Error calculating CMV:", error);
+    }
+  };
+
+  const expensiveProducts = products
+    ?.sort((a, b) => Number(b.unit_price) - Number(a.unit_price))
+    .slice(0, 5);
+
+  const stagnantProducts = products?.filter((p) => {
+    // Simplified check - in production would check stock_movements
+    return p.quantity_in_stock > p.threshold * 3;
   });
 
   const generateInsights = async () => {
@@ -106,48 +169,119 @@ export default function Insights() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{products?.length || 0}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
-            <TrendingUp className="h-4 w-4 text-warning" />
+            <CardTitle className="text-sm font-medium">CMV do Mês</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {products?.filter(p => p.quantity_in_stock < p.threshold).length || 0}
+              R$ {cmvData?.cmv?.toFixed(2) || "0.00"}
             </div>
+            <p className="text-xs text-muted-foreground">
+              {format(lastMonth, "MMMM yyyy")}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Estoque Baixo</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {purchaseOrders?.filter(o => o.delivery_status === 'pending').length || 0}
-            </div>
+            <div className="text-2xl font-bold">{lowStockAlerts?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">Alertas ativos</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Alertas de Segurança</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{invoices?.length || 0}</div>
+            <div className="text-2xl font-bold">{fraudAlerts?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">Não resolvidos</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Produtos Parados</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stagnantProducts?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">Estoque alto</p>
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Produtos Mais Caros</CardTitle>
+            <CardDescription>Top 5 produtos por preço unitário</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {expensiveProducts?.map((product) => (
+                <div key={product.id} className="flex justify-between items-center">
+                  <span className="font-medium">{product.name}</span>
+                  <Badge variant="secondary">R$ {Number(product.unit_price).toFixed(2)}</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Sugestões de Reposição</CardTitle>
+            <CardDescription>Produtos com estoque crítico</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {lowStockAlerts?.slice(0, 5).map((alert: any) => (
+                <div key={alert.id} className="flex justify-between items-center">
+                  <span className="font-medium">{alert.products?.name}</span>
+                  <Badge variant="destructive">{alert.current_quantity} un.</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {cmvData && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Análise CMV - {format(lastMonth, "MMMM yyyy")}</CardTitle>
+            <CardDescription>Custo da Mercadoria Vendida</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Estoque Inicial</p>
+                <p className="text-2xl font-bold">R$ {Number(cmvData.total_inicial).toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Compras</p>
+                <p className="text-2xl font-bold">R$ {Number(cmvData.total_compras).toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Estoque Final</p>
+                <p className="text-2xl font-bold">R$ {Number(cmvData.total_final).toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">CMV Total</p>
+                <p className="text-2xl font-bold text-primary">
+                  R$ {Number(cmvData.cmv).toFixed(2)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {insights && (
         <Card>

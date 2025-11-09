@@ -74,8 +74,11 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold">StockFlow</CardTitle>
-          <CardDescription>Inventory Management System</CardDescription>
+          <CardTitle className="text-3xl font-bold">Zola Inventory AI</CardTitle>
+          <CardDescription>Sistema de Gestão Inteligente</CardDescription>
+          <p className="text-xs text-muted-foreground mt-2">
+            ⚠️ Apenas e-mails @zola-pizza.com são permitidos
+          </p>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">

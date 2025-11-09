@@ -14,6 +14,7 @@ import PurchaseOrders from "./pages/PurchaseOrders";
 import Insights from "./pages/Insights";
 import Users from "./pages/Users";
 import Profile from "./pages/Profile";
+import StockMovements from "./pages/StockMovements";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -104,6 +105,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Profile />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/stock-movements"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <StockMovements />
                   </Layout>
                 </ProtectedRoute>
               }

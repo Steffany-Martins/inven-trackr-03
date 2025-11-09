@@ -8,7 +8,8 @@ import {
   ShoppingCart, 
   Sparkles, 
   LogOut,
-  User
+  User,
+  TrendingUp
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -16,8 +17,15 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { LanguageSelector } from "./LanguageSelector";
+import { NotificationsDropdown } from "./NotificationsDropdown";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
@@ -43,6 +51,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: FileText, label: t("common.invoices"), path: "/invoices" },
     { icon: UsersIcon, label: t("common.suppliers"), path: "/suppliers" },
     { icon: ShoppingCart, label: t("common.orders"), path: "/orders" },
+    { icon: Package, label: "Movimentações", path: "/stock-movements" },
     { icon: Sparkles, label: t("common.insights"), path: "/insights" },
   ];
 
@@ -70,8 +79,8 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
       {/* Sidebar */}
       <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
         <div className="p-6">
-          <h1 className="text-2xl font-bold text-sidebar-foreground">StockFlow</h1>
-          <p className="text-sm text-sidebar-foreground/60">Inventory System</p>
+          <h1 className="text-2xl font-bold text-sidebar-foreground">Zola Inventory AI</h1>
+          <p className="text-sm text-sidebar-foreground/60">Sistema Inteligente</p>
         </div>
         <nav className="space-y-1 px-3">
           {navItems.map((item) => {
@@ -97,32 +106,34 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         
         {/* User section at bottom */}
         <div className="mt-auto p-3 border-t border-sidebar-border space-y-3">
-          <div className="flex items-center gap-3 px-3">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={profile?.avatar_url || undefined} />
-              <AvatarFallback>
-                {profile?.full_name?.charAt(0) || profile?.email?.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">
-                {profile?.full_name || "User"}
-              </p>
-              <Badge className={cn("text-xs", getRoleBadgeColor(userRole))}>
-                {t(`users.roles.${userRole}`)}
-              </Badge>
-            </div>
-          </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <NotificationsDropdown />
             <LanguageSelector />
-            <Button 
-              variant="ghost" 
-              className="flex-1 justify-start text-sidebar-foreground hover:bg-sidebar-accent"
-              onClick={signOut}
-            >
-              <LogOut className="h-5 w-5 mr-2" />
-              {t("common.logout")}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={profile?.avatar_url || undefined} />
+                    <AvatarFallback>
+                      {profile?.full_name?.charAt(0) || profile?.email?.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <div className="p-2">
+                  <p className="text-sm font-medium">{profile?.full_name || "User"}</p>
+                  <p className="text-xs text-muted-foreground">{profile?.email}</p>
+                  <Badge className={cn("text-xs mt-1", getRoleBadgeColor(userRole))}>
+                    {t(`users.roles.${userRole}`)}
+                  </Badge>
+                </div>
+                <DropdownMenuItem onClick={signOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  {t("common.logout")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </aside>
