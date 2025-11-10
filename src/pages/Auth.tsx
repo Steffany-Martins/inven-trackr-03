@@ -50,6 +50,17 @@ export default function Auth() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate email domain
+    if (!signupEmail.endsWith('@zola-pizza.com')) {
+      toast({
+        title: "Invalid email",
+        description: "Only @zola-pizza.com emails are allowed",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     const { error } = await signUp(signupEmail, signupPassword, signupFullName);
@@ -135,10 +146,12 @@ export default function Auth() {
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="your@email.com"
+                    placeholder="name@zola-pizza.com"
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
                     required
+                    pattern=".*@zola-pizza\.com$"
+                    title="Must be a @zola-pizza.com email"
                   />
                 </div>
                 <div className="space-y-2">
