@@ -19,7 +19,20 @@ Deno.serve(async (req: Request) => {
     const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
 
     if (!GOOGLE_API_KEY) {
-      throw new Error("GOOGLE_API_KEY is not configured");
+      console.error("GOOGLE_API_KEY not configured");
+      return new Response(
+        JSON.stringify({
+          error: "API key not configured",
+          insights: "⚠️ A chave da API do Google AI não está configurada. Entre em contato com o administrador do sistema para configurar a variável de ambiente GOOGLE_API_KEY.",
+        }),
+        {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     const systemPrompt = `Você é um especialista em gestão de inventário e análise de dados para restaurantes. Analise os dados de inventário fornecidos e gere insights acionáveis em português, incluindo:

@@ -60,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('[AuthContext] Fetching profile for user ID:', userId);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -67,13 +68,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (error) {
-        console.error("Error fetching profile:", error);
+        console.error("[AuthContext] Error fetching profile:", error);
         setProfile(null);
         return;
       }
 
       if (!data) {
-        console.warn("Profile not found for user:", userId);
+        console.warn("[AuthContext] Profile not found for user:", userId);
         setProfile(null);
         return;
       }
@@ -84,9 +85,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      console.log('[AuthContext] ✅ Profile loaded:', {
+        email: data.email,
+        role: data.role,
+        status: data.status
+      });
       setProfile(data as Profile);
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      console.error("[AuthContext] Error fetching profile:", error);
       setProfile(null);
     }
   };

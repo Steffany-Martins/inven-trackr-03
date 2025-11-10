@@ -30,6 +30,11 @@ export default function Products() {
   const canEdit = profile?.role === "manager" || profile?.role === "supervisor";
   const canDelete = profile?.role === "manager";
 
+  // Debug logging
+  console.log('Products Page - Profile:', profile);
+  console.log('Products Page - Can Edit:', canEdit);
+  console.log('Products Page - Can Delete:', canDelete);
+
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
