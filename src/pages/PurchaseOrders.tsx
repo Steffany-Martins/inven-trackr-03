@@ -3,35 +3,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { PurchaseOrderForm } from "@/components/PurchaseOrderForm";
 import { PurchaseOrdersTable } from "@/components/PurchaseOrdersTable";
-import { PurchaseOrderFilters } from "@/components/PurchaseOrderFilters";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function PurchaseOrders() {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [supplierFilter, setSupplierFilter] = useState("all");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const { toast } = useToast();
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const { profile } = useAuth();
   const queryClient = useQueryClient();
 
   const canEdit = profile?.role === "manager" || profile?.role === "supervisor";
 
-  const { data: orders, isLoading } = useQuery({
-    queryKey: ["purchase_orders"],
+  const { data: purchaseOrders, isLoading } = useQuery({
+    queryKey: ["purchaseOrders"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("purchase_orders")
         .select(`
           *,
-          products (name),
-          suppliers (name, id)
+          purchase_order_items (*)
         `)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -39,127 +32,59 @@ export default function PurchaseOrders() {
     },
   });
 
-  const { data: suppliers } = useQuery({
-    queryKey: ["suppliers"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("suppliers")
-        .select("*")
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const filteredOrders = useMemo(() => {
-    if (!orders) return [];
-
-    return orders.filter((order) => {
-      const matchesSearch = !searchTerm || 
-        order.products?.name.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === "all" || 
-        order.delivery_status === statusFilter;
-      
-      const matchesSupplier = supplierFilter === "all" || 
-        order.supplier_id === supplierFilter;
-      
-      const matchesDateRange = (!startDate || new Date(order.created_at) >= new Date(startDate)) &&
-        (!endDate || new Date(order.created_at) <= new Date(endDate));
-
-      return matchesSearch && matchesStatus && matchesSupplier && matchesDateRange;
-    });
-  }, [orders, searchTerm, statusFilter, supplierFilter, startDate, endDate]);
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "pending" | "in_transit" | "delivered" | "cancelled" }) => {
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
       const { error } = await supabase
         .from("purchase_orders")
-        .update({ delivery_status: status })
+        .delete()
         .eq("id", id);
       if (error) throw error;
-
-      // If delivered, update product stock
-      if (status === "delivered") {
-        const order = orders?.find((o) => o.id === id);
-        if (order) {
-          const { data: product } = await supabase
-            .from("products")
-            .select("quantity_in_stock")
-            .eq("id", order.product_id)
-            .single();
-
-          if (product) {
-            await supabase
-              .from("products")
-              .update({
-                quantity_in_stock: product.quantity_in_stock + order.quantity,
-              })
-              .eq("id", order.product_id);
-          }
-        }
-      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["purchase_orders"] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      toast({ title: "Order status updated successfully" });
+      toast.success("Pedido excluído com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["purchaseOrders"] });
     },
-    onError: () => {
-      toast({ title: "Failed to update order status", variant: "destructive" });
+    onError: (error: any) => {
+      toast.error("Erro ao excluir pedido: " + error.message);
     },
   });
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Purchase Orders</h1>
-          <p className="text-muted-foreground">Track inventory orders</p>
+          <h1 className="text-3xl font-bold tracking-tight">Pedidos de Compra</h1>
+          <p className="text-muted-foreground">Gerencie pedidos aos fornecedores</p>
         </div>
         {canEdit && (
-          <Button onClick={() => setIsFormOpen(true)}>
+          <Button onClick={() => { setSelectedOrder(null); setIsFormOpen(true); }}>
             <Plus className="mr-2 h-4 w-4" />
-            Create Order
+            Novo Pedido
           </Button>
         )}
       </div>
 
-      <PurchaseOrderFilters
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-        supplierFilter={supplierFilter}
-        setSupplierFilter={setSupplierFilter}
-        startDate={startDate}
-        setStartDate={setStartDate}
-        endDate={endDate}
-        setEndDate={setEndDate}
-        suppliers={suppliers || []}
-      />
-
       <Card>
         <CardHeader>
-          <CardTitle>All Purchase Orders</CardTitle>
+          <CardTitle>Todos os Pedidos</CardTitle>
         </CardHeader>
         <CardContent>
           <PurchaseOrdersTable
-            orders={filteredOrders}
+            purchaseOrders={purchaseOrders || []}
             isLoading={isLoading}
-            onUpdateStatus={(id, status) =>
-              updateStatusMutation.mutate({ id, status })
-            }
+            onEdit={canEdit ? (order) => { setSelectedOrder(order); setIsFormOpen(true); } : undefined}
+            onDelete={canEdit ? (id) => deleteMutation.mutate(id) : undefined}
           />
         </CardContent>
       </Card>
 
       {isFormOpen && (
         <PurchaseOrderForm
-          onClose={() => setIsFormOpen(false)}
-          onSuccess={() => {
+          order={selectedOrder}
+          onClose={() => {
             setIsFormOpen(false);
-            queryClient.invalidateQueries({ queryKey: ["purchase_orders"] });
+            setSelectedOrder(null);
+            queryClient.invalidateQueries({ queryKey: ["purchaseOrders"] });
           }}
         />
       )}

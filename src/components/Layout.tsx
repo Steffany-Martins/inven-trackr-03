@@ -1,16 +1,19 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { 
-  LayoutDashboard, 
-  Package, 
-  FileText, 
-  Users as UsersIcon, 
-  ShoppingCart, 
-  Sparkles, 
+import {
+  LayoutDashboard,
+  Package,
+  FileText,
+  Users as UsersIcon,
+  ShoppingCart,
+  Sparkles,
   LogOut,
   User,
-  TrendingUp
+  TrendingUp,
+  Menu,
+  X
 } from "lucide-react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
@@ -31,6 +34,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const { signOut, profile, user } = useAuth();
   const { t } = useTranslation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
     { icon: LayoutDashboard, label: t("common.dashboard"), path: "/" },
@@ -65,8 +69,30 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="flex min-h-screen bg-background">
+      {/* Mobile Menu Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="lg:hidden fixed top-4 left-4 z-50 bg-background shadow-lg"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      >
+        {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </Button>
+
+      {/* Overlay for mobile */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-72 bg-gradient-to-b from-sidebar via-sidebar to-sidebar/95 border-r border-sidebar-border/50 flex flex-col shadow-2xl">
+      <aside className={cn(
+        "w-72 bg-gradient-to-b from-sidebar via-sidebar to-sidebar/95 border-r border-sidebar-border/50 flex flex-col shadow-2xl",
+        "lg:relative fixed inset-y-0 left-0 z-40 transform transition-transform duration-300",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
         <div className="p-6 border-b border-sidebar-border/30">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
