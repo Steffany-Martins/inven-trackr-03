@@ -46,11 +46,10 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
 
   const { register, handleSubmit, control, watch, setValue } = useForm({
     defaultValues: {
-      customer_name: "",
-      phone_number: "",
-      shipping_price: "0",
-      tax_amount: "0",
-      items: [{ product_id: "", item_name: "", quantity: "1", price_per_item: "0", deduct_stock: true }],
+      supplier_name: "",
+      invoice_number: "",
+      invoice_date: new Date().toISOString().split('T')[0],
+      items: [{ product_name: "", quantity: "1", price: "0", unit: "unidades" }],
     },
   });
 
@@ -72,102 +71,48 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
   });
 
   const watchItems = watch("items");
-  const watchShipping = watch("shipping_price");
-  const watchTax = watch("tax_amount");
 
-  const subtotal = watchItems.reduce((sum, item) => {
+  const total = watchItems.reduce((sum, item) => {
     const qty = parseFloat(item.quantity) || 0;
-    const price = parseFloat(item.price_per_item) || 0;
+    const price = parseFloat(item.price) || 0;
     return sum + qty * price;
   }, 0);
 
-  const total = subtotal + parseFloat(watchShipping || "0") + parseFloat(watchTax || "0");
-
   const mutation = useMutation({
     mutationFn: async (data: any) => {
-      const invoiceNumber = `INV-${Date.now()}`;
-      let imageUrl: string | null = null;
+      const productsArray = data.items.map((item: any) => ({
+        name: item.product_name,
+        quantity: parseFloat(item.quantity),
+        unit: item.unit,
+        price: parseFloat(item.price),
+      }));
 
-      if (imageFile) {
-        const fileName = `${invoiceNumber}-${Date.now()}`;
-        const { error: uploadError } = await supabase.storage
-          .from("Invoices")
-          .upload(fileName, imageFile);
-
-        if (uploadError) throw uploadError;
-
-        const { data: publicUrlData } = supabase.storage
-          .from("Invoices")
-          .getPublicUrl(fileName);
-
-        imageUrl = publicUrlData.publicUrl;
-      }
-
-      const { data: invoice, error: invoiceError } = await supabase
+      const { error: invoiceError } = await supabase
         .from("invoices")
         .insert([
           {
-            invoice_number: invoiceNumber,
-            customer_name: data.customer_name,
-            phone_number: data.phone_number || "",
-            total_amount: total,
-            shipping_price: parseFloat(data.shipping_price),
-            tax_amount: parseFloat(data.tax_amount),
+            invoice_number: data.invoice_number,
+            supplier_name: data.supplier_name,
+            invoice_date: data.invoice_date,
+            total_value: total,
+            status: 'confirmed',
+            phone_number: '+55 11 00000-0000',
+            image_url: '/placeholder.svg',
+            products: productsArray,
           },
-        ])
-        .select()
-        .maybeSingle();
+        ]);
 
       if (invoiceError) throw invoiceError;
-
-      if (invoice) {
-        for (const item of data.items) {
-          let productId = item.product_id;
-
-          if (!productId && item.item_name) {
-            const { data: newProduct, error: productError } = await supabase
-              .from("products")
-              .insert([
-                {
-                  name: item.item_name,
-                  category: "general",
-                  vendor_name: "General",
-                  unit_price: parseFloat(item.price_per_item),
-                  quantity_in_stock: 0,
-                  threshold: 10,
-                },
-              ])
-              .select()
-              .maybeSingle();
-
-            if (productError) throw productError;
-            productId = newProduct?.id;
-          }
-
-          if (item.deduct_stock && productId) {
-            await supabase.from("stock_movements").insert([
-              {
-                product_id: productId,
-                movement_type: "out",
-                quantity: parseInt(item.quantity),
-                reference_type: "invoice",
-                reference_id: invoice.id,
-                notes: `Invoice ${invoiceNumber}`,
-              },
-            ]);
-          }
-        }
-      }
     },
     onSuccess: () => {
-      toast({ title: "Invoice created successfully" });
+      toast({ title: "Fatura criada com sucesso" });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
       onClose();
     },
     onError: (error: any) => {
+      console.error('Invoice creation error:', error);
       toast({
-        title: "Failed to create invoice",
+        title: "Erro ao criar fatura",
         description: error.message,
         variant: "destructive"
       });
@@ -182,126 +127,103 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t("invoices.addInvoice")}</DialogTitle>
+          <DialogTitle>Adicionar Fatura</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="customer_name">{t("invoices.customerName")}</Label>
+              <Label htmlFor="invoice_number">Número da Fatura *</Label>
               <Input
-                id="customer_name"
-                {...register("customer_name", { required: true })}
-                placeholder={t("invoices.customerName")}
+                id="invoice_number"
+                {...register("invoice_number", { required: true })}
+                placeholder="FAT-2025-XXX"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Invoice Image</Label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageSelect}
-                className="hidden"
+              <Label htmlFor="supplier_name">Fornecedor *</Label>
+              <Input
+                id="supplier_name"
+                {...register("supplier_name", { required: true })}
+                placeholder="Nome do fornecedor"
               />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {imageFile ? "Change Image" : "Upload Image"}
-              </Button>
-              {imagePreview && (
-                <div className="mt-2 relative">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-32 object-cover rounded-lg"
-                  />
-                </div>
-              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="invoice_date">Data da Fatura *</Label>
+              <Input
+                id="invoice_date"
+                type="date"
+                {...register("invoice_date", { required: true })}
+              />
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>{t("invoices.items")}</Label>
+              <Label>Produtos da Fatura *</Label>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  append({ product_id: "", item_name: "", quantity: "1", price_per_item: "0", deduct_stock: true })
+                  append({ product_name: "", quantity: "1", price: "0", unit: "unidades" })
                 }
               >
                 <Plus className="h-4 w-4 mr-2" />
-                {t("invoices.addItem")}
+                Adicionar Produto
               </Button>
             </div>
 
             {fields.map((field, index) => (
-              <div key={field.id} className="flex gap-2 items-end border p-3 rounded-lg">
+              <div key={field.id} className="flex gap-2 items-end border p-3 rounded-lg bg-muted/30">
                 <div className="flex-1 space-y-2">
-                  <Label>{t("products.name")}</Label>
-                  <Select
-                    onValueChange={(value) => {
-                      setValue(`items.${index}.product_id`, value);
-                      const product = products?.find((p) => p.id === value);
-                      if (product) {
-                        setValue(`items.${index}.item_name`, product.name);
-                        setValue(`items.${index}.price_per_item`, String(product.unit_price));
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecionar produto existente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products?.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} - ${product.unit_price}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Nome do Produto</Label>
                   <Input
-                    {...register(`items.${index}.item_name`)}
-                    placeholder="Ou digite nome do novo produto"
+                    {...register(`items.${index}.product_name`, { required: true })}
+                    placeholder="Ex: Queijo Mussarela"
                   />
                 </div>
 
-                <div className="w-24 space-y-2">
-                  <Label>{t("invoices.quantity")}</Label>
+                <div className="w-28 space-y-2">
+                  <Label>Quantidade</Label>
                   <Input
                     type="number"
-                    {...register(`items.${index}.quantity`)}
+                    min="0"
+                    step="0.01"
+                    {...register(`items.${index}.quantity`, { required: true })}
                     placeholder="1"
                   />
                 </div>
 
                 <div className="w-32 space-y-2">
-                  <Label>{t("invoices.pricePerItem")}</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    {...register(`items.${index}.price_per_item`)}
-                    placeholder="0.00"
-                  />
+                  <Label>Unidade</Label>
+                  <Select
+                    defaultValue="unidades"
+                    onValueChange={(value) => setValue(`items.${index}.unit`, value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="kg">kg</SelectItem>
+                      <SelectItem value="litros">Litros</SelectItem>
+                      <SelectItem value="unidades">Unidades</SelectItem>
+                      <SelectItem value="gramas">Gramas</SelectItem>
+                      <SelectItem value="ml">ml</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`deduct-${index}`}
-                    checked={watchItems[index]?.deduct_stock}
-                    onCheckedChange={(checked) => 
-                      setValue(`items.${index}.deduct_stock`, checked as boolean)
-                    }
+                <div className="w-32 space-y-2">
+                  <Label>Preço Unit. (R$)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    {...register(`items.${index}.price`, { required: true })}
+                    placeholder="0.00"
                   />
-                  <Label htmlFor={`deduct-${index}`} className="text-xs whitespace-nowrap">
-                    {t("invoices.deductStock")}
-                  </Label>
                 </div>
 
                 <Button
@@ -310,50 +232,29 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
                   size="icon"
                   onClick={() => remove(index)}
                   disabled={fields.length === 1}
+                  title="Remover produto"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="shipping_price">{t("invoices.shippingPrice")} ($)</Label>
-              <Input
-                id="shipping_price"
-                type="number"
-                step="0.01"
-                {...register("shipping_price")}
-                placeholder="0.00"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="tax_amount">{t("invoices.taxAmount")} ($)</Label>
-              <Input
-                id="tax_amount"
-                type="number"
-                step="0.01"
-                {...register("tax_amount")}
-                placeholder="0.00"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>{t("invoices.totalAmount")}</Label>
-              <div className="text-2xl font-bold text-primary">
-                ${total.toFixed(2)}
+          <div className="flex justify-end items-center gap-4 pt-4 border-t">
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Valor Total</p>
+              <div className="text-3xl font-bold text-primary">
+                R$ {total.toFixed(2)}
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
-              {t("common.cancel")}
+              Cancelar
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Creating..." : t("common.save")}
+              {mutation.isPending ? "Salvando..." : "Salvar Fatura"}
             </Button>
           </div>
         </form>

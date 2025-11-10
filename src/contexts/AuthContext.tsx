@@ -64,11 +64,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from("profiles")
         .select("*")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching profile:", error);
-        toast.error("Erro ao carregar perfil do usuário");
+        setProfile(null);
+        return;
+      }
+
+      if (!data) {
+        console.warn("Profile not found for user:", userId);
         setProfile(null);
         return;
       }

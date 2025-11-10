@@ -1,16 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus } from "lucide-react";
+import { Plus, FileUp } from "lucide-react";
 import { useState } from "react";
 import { InvoiceForm } from "@/components/InvoiceForm";
 import { InvoicesTable } from "@/components/InvoicesTable";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 
 export default function Invoices() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { profile } = useAuth();
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
 
   const canEdit = profile?.role === "manager" || profile?.role === "supervisor";
 
@@ -19,13 +22,7 @@ export default function Invoices() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
-        .select(`
-          *,
-          invoice_items (
-            *,
-            products (name)
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -36,20 +33,26 @@ export default function Invoices() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
-          <p className="text-muted-foreground">Manage customer invoices</p>
+          <h1 className="text-3xl font-bold tracking-tight">Faturas</h1>
+          <p className="text-muted-foreground">Gerencie as faturas de compra e vendas</p>
         </div>
         {canEdit && (
-          <Button onClick={() => setIsFormOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Invoice
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsFormOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Fatura
+            </Button>
+            <Button variant="outline">
+              <FileUp className="mr-2 h-4 w-4" />
+              Importar CSV/PDF
+            </Button>
+          </div>
         )}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Invoices</CardTitle>
+          <CardTitle>Todas as Faturas</CardTitle>
         </CardHeader>
         <CardContent>
           <InvoicesTable invoices={invoices || []} isLoading={isLoading} />
@@ -57,7 +60,12 @@ export default function Invoices() {
       </Card>
 
       {isFormOpen && (
-        <InvoiceForm onClose={() => setIsFormOpen(false)} />
+        <InvoiceForm
+          onClose={() => {
+            setIsFormOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["invoices"] });
+          }}
+        />
       )}
     </div>
   );
