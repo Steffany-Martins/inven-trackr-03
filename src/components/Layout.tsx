@@ -29,21 +29,8 @@ import {
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const { signOut, userRole, user } = useAuth();
+  const { signOut, profile, user } = useAuth();
   const { t } = useTranslation();
-
-  const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user?.id)
-        .single();
-      return data;
-    },
-    enabled: !!user?.id,
-  });
 
   const navItems = [
     { icon: LayoutDashboard, label: t("common.dashboard"), path: "/" },
@@ -55,34 +42,43 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Sparkles, label: t("common.insights"), path: "/insights" },
   ];
 
-  if (userRole === "manager") {
+  if (profile?.role === "manager") {
     navItems.push({ icon: UsersIcon, label: t("common.users"), path: "/users" });
   }
 
   navItems.push({ icon: User, label: t("common.profile"), path: "/profile" });
 
-  const getRoleBadgeColor = (role: string | null) => {
+  const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "manager":
-        return "bg-primary";
+        return "bg-primary text-primary-foreground";
       case "supervisor":
-        return "bg-warning";
+        return "bg-secondary text-secondary-foreground";
       case "staff":
-        return "bg-muted";
+        return "bg-muted text-muted-foreground";
+      case "pending":
+        return "bg-warning text-warning-foreground";
       default:
-        return "bg-muted";
+        return "bg-muted text-muted-foreground";
     }
   };
 
   return (
     <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold text-sidebar-foreground">Zola Inventory AI</h1>
-          <p className="text-sm text-sidebar-foreground/60">Sistema Inteligente</p>
+      <aside className="w-72 bg-gradient-to-b from-sidebar via-sidebar to-sidebar/95 border-r border-sidebar-border/50 flex flex-col shadow-2xl">
+        <div className="p-6 border-b border-sidebar-border/30">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+              <Package className="h-6 w-6 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-sidebar-foreground">Zola Inventory</h1>
+              <p className="text-xs text-sidebar-foreground/60">Sistema Inteligente</p>
+            </div>
+          </div>
         </div>
-        <nav className="space-y-1 px-3">
+        <nav className="space-y-1 px-3 py-4">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -91,10 +87,10 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
+                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
                   isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent"
+                    ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg scale-105"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:translate-x-1"
                 )}
               >
                 <Icon className="h-5 w-5" />
@@ -124,9 +120,11 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                 <div className="p-2">
                   <p className="text-sm font-medium">{profile?.full_name || "User"}</p>
                   <p className="text-xs text-muted-foreground">{profile?.email}</p>
-                  <Badge className={cn("text-xs mt-1", getRoleBadgeColor(userRole))}>
-                    {t(`users.roles.${userRole}`)}
-                  </Badge>
+                  {profile?.role && (
+                    <Badge className={cn("text-xs mt-1", getRoleBadgeColor(profile.role))}>
+                      {t(`users.roles.${profile.role}`)}
+                    </Badge>
+                  )}
                 </div>
                 <DropdownMenuItem onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-2" />
@@ -139,8 +137,8 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <div className="container mx-auto p-6">{children}</div>
+      <main className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-muted/20">
+        <div className="container mx-auto p-8">{children}</div>
       </main>
     </div>
   );

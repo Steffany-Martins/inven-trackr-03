@@ -98,18 +98,20 @@ export default function Dashboard() {
 
       <LowStockAlerts />
 
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <Icon className={cn("h-4 w-4", stat.color)} />
+            <Card key={stat.title} className="relative overflow-hidden border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                <CardTitle className="text-sm font-medium text-foreground/80">{stat.title}</CardTitle>
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                  <Icon className={cn("h-5 w-5", stat.color)} />
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
+              <CardContent className="relative z-10">
+                <div className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">{stat.value}</div>
               </CardContent>
             </Card>
           );

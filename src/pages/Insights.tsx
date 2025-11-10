@@ -166,51 +166,63 @@ export default function Insights() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">CMV do Mês</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+        <Card className="relative overflow-hidden border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-foreground/80">CMV do Mês</CardTitle>
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+              <DollarSign className="h-5 w-5 text-primary" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="relative z-10">
+            <div className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
               R$ {cmvData?.cmv?.toFixed(2) || "0.00"}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-1">
               {format(lastMonth, "MMMM yyyy")}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Estoque Baixo</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-warning" />
+        <Card className="relative overflow-hidden border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-warning/5 via-transparent to-warning/10" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-foreground/80">Estoque Baixo</CardTitle>
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-warning/20 to-warning/10 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{lowStockAlerts?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Alertas ativos</p>
+          <CardContent className="relative z-10">
+            <div className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">{lowStockAlerts?.length || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Alertas ativos</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Alertas de Segurança</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
+        <Card className="relative overflow-hidden border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-destructive/5 via-transparent to-destructive/10" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-foreground/80">Alertas de Segurança</CardTitle>
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-destructive/20 to-destructive/10 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{fraudAlerts?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Não resolvidos</p>
+          <CardContent className="relative z-10">
+            <div className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">{fraudAlerts?.length || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Não resolvidos</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Produtos Parados</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+        <Card className="relative overflow-hidden border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-foreground/80">Produtos Parados</CardTitle>
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+              <Package className="h-5 w-5 text-primary" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stagnantProducts?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Estoque alto</p>
+          <CardContent className="relative z-10">
+            <div className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">{stagnantProducts?.length || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Estoque alto</p>
           </CardContent>
         </Card>
       </div>

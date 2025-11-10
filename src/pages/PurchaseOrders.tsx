@@ -18,10 +18,10 @@ export default function PurchaseOrders() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const { toast } = useToast();
-  const { userRole } = useAuth();
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
 
-  const canEdit = userRole === "manager" || userRole === "supervisor";
+  const canEdit = profile?.role === "manager" || profile?.role === "supervisor";
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["purchase_orders"],

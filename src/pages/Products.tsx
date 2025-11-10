@@ -23,12 +23,12 @@ export default function Products() {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const { toast } = useToast();
-  const { userRole } = useAuth();
+  const { profile } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
-  const canEdit = userRole === "manager" || userRole === "supervisor";
-  const canDelete = userRole === "manager";
+  const canEdit = profile?.role === "manager" || profile?.role === "supervisor";
+  const canDelete = profile?.role === "manager";
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],

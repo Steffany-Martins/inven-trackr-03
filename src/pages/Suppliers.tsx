@@ -13,11 +13,11 @@ export default function Suppliers() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const { toast } = useToast();
-  const { userRole } = useAuth();
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
 
-  const canEdit = userRole === "manager" || userRole === "supervisor";
-  const canDelete = userRole === "manager";
+  const canEdit = profile?.role === "manager" || profile?.role === "supervisor";
+  const canDelete = profile?.role === "manager";
 
   const { data: suppliers, isLoading } = useQuery({
     queryKey: ["suppliers"],

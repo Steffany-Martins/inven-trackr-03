@@ -10,9 +10,9 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function Invoices() {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const { userRole } = useAuth();
+  const { profile } = useAuth();
 
-  const canEdit = userRole === "manager" || userRole === "supervisor";
+  const canEdit = profile?.role === "manager" || profile?.role === "supervisor";
 
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["invoices"],

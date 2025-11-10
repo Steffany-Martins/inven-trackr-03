@@ -39,7 +39,7 @@ import { Badge } from "@/components/ui/badge";
 export default function StockMovements() {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { userRole } = useAuth();
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -49,7 +49,7 @@ export default function StockMovements() {
     notes: "",
   });
 
-  const canCreate = userRole === "manager" || userRole === "supervisor";
+  const canCreate = profile?.role === "manager" || profile?.role === "supervisor";
 
   const { data: movements, isLoading } = useQuery({
     queryKey: ["stock_movements"],
