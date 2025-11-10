@@ -154,8 +154,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.user) {
-        toast.success("Conta criada com sucesso! Aguarde aprovação do gerente.");
-        navigate("/auth");
+        toast.success("Conta criada com sucesso! Aguarde a aprovação de um gerente para acessar o sistema.");
+        await supabase.auth.signOut();
       }
 
       return { error: null };

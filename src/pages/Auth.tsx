@@ -63,7 +63,7 @@ export default function Auth() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-warning/10 border border-warning/30">
             <span className="text-warning text-sm font-medium">⚠️</span>
             <p className="text-xs font-medium text-foreground/80">
-              Apenas e-mails @zola-pizza.com
+              Apenas emails @zola-pizza.com • Aprovação necessária
             </p>
           </div>
         </CardHeader>

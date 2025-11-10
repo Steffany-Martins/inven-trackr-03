@@ -10,6 +10,7 @@ import { ProductsTable } from "@/components/ProductsTable";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { exportToExcel } from "@/utils/exportExcel";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   Select,
   SelectContent,
@@ -26,14 +27,20 @@ export default function Products() {
   const { profile } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const permissions = usePermissions();
 
-  const canEdit = profile?.role === "manager" || profile?.role === "supervisor";
-  const canDelete = profile?.role === "manager";
+  const canAdd = permissions.canAddProducts;
+  const canEdit = permissions.canEditProducts;
+  const canDelete = permissions.canDeleteProducts;
+  const canExport = permissions.canExportData;
 
-  // Debug logging
   console.log('Products Page - Profile:', profile);
-  console.log('Products Page - Can Edit:', canEdit);
-  console.log('Products Page - Can Delete:', canDelete);
+  console.log('Products Page - Permissions:', {
+    canAdd,
+    canEdit,
+    canDelete,
+    canExport
+  });
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],
@@ -67,7 +74,7 @@ export default function Products() {
 
   const handleEdit = (product: any) => {
     if (!canEdit) {
-      toast({ title: "Access denied", description: "You don't have permission to edit products", variant: "destructive" });
+      toast({ title: "Acesso negado", description: "Você não tem permissão para editar produtos", variant: "destructive" });
       return;
     }
     setEditingProduct(product);
@@ -76,10 +83,10 @@ export default function Products() {
 
   const handleDelete = (id: string) => {
     if (!canDelete) {
-      toast({ title: "Access denied", description: "Only managers can delete products", variant: "destructive" });
+      toast({ title: "Acesso negado", description: "Você não tem permissão para excluir produtos", variant: "destructive" });
       return;
     }
-    if (confirm("Are you sure you want to delete this product?")) {
+    if (confirm("Tem certeza que deseja excluir este produto?")) {
       deleteMutation.mutate(id);
     }
   };
@@ -90,6 +97,10 @@ export default function Products() {
   };
 
   const handleExport = () => {
+    if (!canExport) {
+      toast({ title: "Acesso negado", description: "Você não tem permissão para exportar dados", variant: "destructive" });
+      return;
+    }
     if (!filteredProducts) return;
     const exportData = filteredProducts.map(p => ({
       Nome: p.name,
@@ -112,11 +123,13 @@ export default function Products() {
           <p className="text-muted-foreground">{t("products.description")}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
-            {t("common.export")}
-          </Button>
-          {canEdit && (
+          {canExport && (
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" />
+              {t("common.export")}
+            </Button>
+          )}
+          {canAdd && (
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               {t("products.addProduct")}

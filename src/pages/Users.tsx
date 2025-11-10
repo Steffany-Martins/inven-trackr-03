@@ -15,6 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { UserPermissionsDialog } from "@/components/UserPermissionsDialog";
 
 type UserRole = "manager" | "supervisor" | "staff" | "pending";
 type UserStatus = "active" | "pending" | "inactive";
@@ -248,6 +249,10 @@ export default function Users() {
                               </SelectItem>
                             </SelectContent>
                           </Select>
+                          <UserPermissionsDialog
+                            userId={userItem.id}
+                            userName={userItem.full_name || userItem.email}
+                          />
                         </div>
                       )}
                     </TableCell>
