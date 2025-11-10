@@ -109,10 +109,10 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
           {
             invoice_number: invoiceNumber,
             customer_name: data.customer_name,
+            phone_number: data.phone_number || "",
             total_amount: total,
-            status: "pending",
-            image_url: imageUrl,
-            notes: data.notes || "",
+            shipping_price: parseFloat(data.shipping_price),
+            tax_amount: parseFloat(data.tax_amount),
           },
         ])
         .select()
@@ -130,11 +130,11 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
               .insert([
                 {
                   name: item.item_name,
-                  sku: `SKU-${Date.now()}`,
                   category: "general",
+                  vendor_name: "General",
                   unit_price: parseFloat(item.price_per_item),
-                  current_stock: 0,
-                  minimum_stock: 10,
+                  quantity_in_stock: 0,
+                  threshold: 10,
                 },
               ])
               .select()
