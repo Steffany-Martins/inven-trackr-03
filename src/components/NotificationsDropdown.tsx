@@ -32,7 +32,7 @@ export function NotificationsDropdown() {
         supabase
           .from("fraud_alerts")
           .select("*")
-          .eq("status", "pending")
+          .eq("resolved", false)
           .order("created_at", { ascending: false })
           .limit(5),
       ]);
@@ -50,12 +50,19 @@ export function NotificationsDropdown() {
 
   const resolveAlertMutation = useMutation({
     mutationFn: async ({ id, type }: { id: string; type: "low_stock" | "fraud" }) => {
-      const table = type === "low_stock" ? "low_stock_alerts" : "fraud_alerts";
-      const { error } = await supabase
-        .from(table)
-        .update({ status: type === 'low_stock' ? 'resolved' : 'reviewed', resolved_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
+      if (type === "low_stock") {
+        const { error } = await supabase
+          .from("low_stock_alerts")
+          .update({ status: 'resolved', resolved_at: new Date().toISOString() })
+          .eq("id", id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("fraud_alerts")
+          .update({ resolved: true, resolved_at: new Date().toISOString() })
+          .eq("id", id);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alerts"] });
