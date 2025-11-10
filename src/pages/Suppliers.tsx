@@ -8,6 +8,7 @@ import { SupplierForm } from "@/components/SupplierForm";
 import { SuppliersTable } from "@/components/SuppliersTable";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function Suppliers() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -15,9 +16,11 @@ export default function Suppliers() {
   const { toast } = useToast();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
+  const permissions = usePermissions();
 
-  const canEdit = profile?.role === "manager" || profile?.role === "supervisor";
-  const canDelete = profile?.role === "manager";
+  const canAdd = permissions.canAddSuppliers;
+  const canEdit = permissions.canEditSuppliers;
+  const canDelete = permissions.canDeleteSuppliers;
 
   const { data: suppliers, isLoading } = useQuery({
     queryKey: ["suppliers"],
@@ -76,7 +79,7 @@ export default function Suppliers() {
           <h1 className="text-3xl font-bold tracking-tight">Suppliers</h1>
           <p className="text-muted-foreground">Manage your supplier contacts</p>
         </div>
-        {canEdit && (
+        {canAdd && (
           <Button onClick={() => setIsFormOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Supplier

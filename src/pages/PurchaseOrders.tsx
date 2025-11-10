@@ -8,14 +8,18 @@ import { PurchaseOrderForm } from "@/components/PurchaseOrderForm";
 import { PurchaseOrdersTable } from "@/components/PurchaseOrdersTable";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function PurchaseOrders() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const { profile } = useAuth();
   const queryClient = useQueryClient();
+  const permissions = usePermissions();
 
-  const canEdit = profile?.role === "manager" || profile?.role === "supervisor";
+  const canAdd = permissions.canAddPurchaseOrders;
+  const canEdit = permissions.canEditPurchaseOrders;
+  const canDelete = permissions.canDeletePurchaseOrders;
 
   const { data: purchaseOrders, isLoading } = useQuery({
     queryKey: ["purchaseOrders"],
@@ -56,7 +60,7 @@ export default function PurchaseOrders() {
           <h1 className="text-3xl font-bold tracking-tight">Pedidos de Compra</h1>
           <p className="text-muted-foreground">Gerencie pedidos aos fornecedores</p>
         </div>
-        {canEdit && (
+        {canAdd && (
           <Button onClick={() => { setSelectedOrder(null); setIsFormOpen(true); }}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Pedido

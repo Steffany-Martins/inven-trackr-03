@@ -8,14 +8,18 @@ import { InvoiceForm } from "@/components/InvoiceForm";
 import { InvoicesTable } from "@/components/InvoicesTable";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function Invoices() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { profile } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const permissions = usePermissions();
 
-  const canEdit = profile?.role === "manager" || profile?.role === "supervisor";
+  const canAdd = permissions.canAddInvoices;
+  const canEdit = permissions.canEditInvoices;
+  const canDelete = permissions.canDeleteInvoices;
 
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["invoices"],
@@ -36,7 +40,7 @@ export default function Invoices() {
           <h1 className="text-3xl font-bold tracking-tight">Faturas</h1>
           <p className="text-muted-foreground">Gerencie as faturas de compra e vendas</p>
         </div>
-        {canEdit && (
+        {canAdd && (
           <div className="flex gap-2">
             <Button onClick={() => setIsFormOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />

@@ -26,9 +26,23 @@ export function usePermissions() {
   });
 
   const hasPermission = (permission: string): boolean => {
-    if (!profile) return false;
+    console.log('🔍 hasPermission check:', {
+      permission,
+      profile: profile ? {
+        role: profile.role,
+        status: profile.status,
+        email: profile.email
+      } : 'null',
+      userPermissions
+    });
+
+    if (!profile) {
+      console.log('❌ No profile found');
+      return false;
+    }
 
     if (profile.role === "manager") {
+      console.log('✅ Manager has all permissions');
       return true;
     }
 
@@ -46,11 +60,14 @@ export function usePermissions() {
         "can_export_data",
       ];
       if (supervisorPermissions.includes(permission)) {
+        console.log('✅ Supervisor has permission:', permission);
         return true;
       }
     }
 
-    return userPermissions.includes(permission);
+    const hasCustomPermission = userPermissions.includes(permission);
+    console.log(hasCustomPermission ? '✅ Has custom permission' : '❌ No custom permission');
+    return hasCustomPermission;
   };
 
   const canAddProducts = hasPermission("can_add_products");
