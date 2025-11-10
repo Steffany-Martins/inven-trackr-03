@@ -312,12 +312,33 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   IA Sugestão
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="upload" className="space-y-2">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                />
+              <TabsContent value="upload" className="space-y-3">
+                <div>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ou escolha uma imagem gerada por IA abaixo
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ex: queijo mussarela, pizza, pão"
+                    value={aiImageQuery}
+                    onChange={(e) => setAiImageQuery(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    onClick={generateAiImage}
+                    disabled={isGeneratingImage}
+                    variant="secondary"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {isGeneratingImage ? "Gerando..." : "Gerar IA"}
+                  </Button>
+                </div>
               </TabsContent>
               <TabsContent value="ai" className="space-y-2">
                 <div className="flex gap-2">
