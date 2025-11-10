@@ -2,15 +2,27 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+
+interface Profile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  role: "manager" | "supervisor" | "staff" | "pending";
+  status: "active" | "pending" | "inactive";
+  created_at: string;
+  updated_at: string;
+}
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  profile: Profile | null;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   loading: boolean;
-  userRole: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,97 +30,139 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
+      (async () => {
         setSession(session);
         setUser(session?.user ?? null);
-        
-        // Fetch user role when session changes
-        if (session?.user) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id);
-          }, 0);
-        } else {
-          setUserRole(null);
-        }
-      }
-    );
 
-    // Check for existing session
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setProfile(null);
+        }
+      })();
+    });
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserRole(session.user.id);
+        fetchProfile(session.user.id);
       }
       setLoading(false);
     });
-
-    return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserRole = async (userId: string) => {
+  const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
         .single();
-      
-      if (error) throw error;
-      setUserRole(data?.role || null);
+
+      if (error) {
+        console.error("Error fetching profile:", error);
+        toast.error("Erro ao carregar perfil do usuário");
+        setProfile(null);
+        return;
+      }
+
+      if (data.status === "inactive") {
+        toast.error("Sua conta está inativa. Entre em contato com o administrador.");
+        await signOut();
+        return;
+      }
+
+      setProfile(data as Profile);
     } catch (error) {
-      console.error("Error fetching user role:", error);
-      setUserRole(null);
+      console.error("Error fetching profile:", error);
+      setProfile(null);
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (!error) {
-      navigate("/");
+    try {
+      if (!email.endsWith("@zola-pizza.com")) {
+        toast.error("Apenas emails @zola-pizza.com são permitidos");
+        return { error: new Error("Invalid email domain") };
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        if (error.message.includes("Invalid login credentials")) {
+          toast.error("Email ou senha incorretos");
+        } else {
+          toast.error(error.message);
+        }
+        return { error };
+      }
+
+      if (data.user) {
+        await fetchProfile(data.user.id);
+        toast.success("Login realizado com sucesso!");
+        navigate("/");
+      }
+
+      return { error: null };
+    } catch (error: any) {
+      toast.error("Erro ao fazer login");
+      return { error };
     }
-    return { error };
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
+    try {
+      if (!email.endsWith("@zola-pizza.com")) {
+        toast.error("Apenas emails @zola-pizza.com são permitidos");
+        return { error: new Error("Invalid email domain") };
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
         },
-      },
-    });
-    
-    if (!error) {
-      navigate("/");
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return { error };
+      }
+
+      if (data.user) {
+        toast.success("Conta criada com sucesso! Aguarde aprovação do gerente.");
+        navigate("/auth");
+      }
+
+      return { error: null };
+    } catch (error: any) {
+      toast.error("Erro ao criar conta");
+      return { error };
     }
-    return { error };
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setUserRole(null);
+    setProfile(null);
     navigate("/auth");
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, session, signIn, signUp, signOut, loading, userRole }}
+      value={{ user, session, profile, signIn, signUp, signOut, loading }}
     >
       {children}
     </AuthContext.Provider>
