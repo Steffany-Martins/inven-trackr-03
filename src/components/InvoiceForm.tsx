@@ -2,6 +2,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
+import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Upload } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -30,6 +31,9 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: products } = useQuery({
     queryKey: ["products"],
@@ -49,6 +53,18 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
       items: [{ product_id: "", item_name: "", quantity: "1", price_per_item: "0", deduct_stock: true }],
     },
   });
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -70,6 +86,22 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
   const mutation = useMutation({
     mutationFn: async (data: any) => {
       const invoiceNumber = `INV-${Date.now()}`;
+      let imageUrl: string | null = null;
+
+      if (imageFile) {
+        const fileName = `${invoiceNumber}-${Date.now()}`;
+        const { error: uploadError } = await supabase.storage
+          .from("Invoices")
+          .upload(fileName, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from("Invoices")
+          .getPublicUrl(fileName);
+
+        imageUrl = publicUrlData.publicUrl;
+      }
 
       const { data: invoice, error: invoiceError } = await supabase
         .from("invoices")
@@ -77,83 +109,67 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
           {
             invoice_number: invoiceNumber,
             customer_name: data.customer_name,
-            phone_number: data.phone_number,
-            shipping_price: parseFloat(data.shipping_price),
-            tax_amount: parseFloat(data.tax_amount),
             total_amount: total,
+            status: "pending",
+            image_url: imageUrl,
+            notes: data.notes || "",
           },
         ])
         .select()
-        .single();
+        .maybeSingle();
 
       if (invoiceError) throw invoiceError;
 
-      // Process each item
-      for (const item of data.items) {
-        let productId = item.product_id;
-        let itemName = item.item_name;
+      if (invoice) {
+        for (const item of data.items) {
+          let productId = item.product_id;
 
-        // If product_id is empty, create new product
-        if (!productId && itemName) {
-          const { data: newProduct, error: productError } = await supabase
-            .from("products")
-            .insert([
-              {
-                name: itemName,
-                category: "restaurante",
-                vendor_name: "N/A",
-                unit_price: parseFloat(item.price_per_item),
-                quantity_in_stock: 0,
-                threshold: 10,
-              },
-            ])
-            .select()
-            .single();
-
-          if (productError) throw productError;
-          productId = newProduct.id;
-        }
-
-        // Create invoice item
-        const { error: itemError } = await supabase
-          .from("invoice_items")
-          .insert([
-            {
-              invoice_id: invoice.id,
-              product_id: productId,
-              item_name: itemName || products?.find(p => p.id === productId)?.name || "",
-              quantity: parseInt(item.quantity),
-              price_per_item: parseFloat(item.price_per_item),
-              subtotal: parseInt(item.quantity) * parseFloat(item.price_per_item),
-            },
-          ]);
-
-        if (itemError) throw itemError;
-
-        // Deduct stock if checkbox is checked
-        if (item.deduct_stock && productId) {
-          const product = products?.find(p => p.id === productId);
-          if (product) {
-            const newQuantity = product.quantity_in_stock - parseInt(item.quantity);
-            await supabase
+          if (!productId && item.item_name) {
+            const { data: newProduct, error: productError } = await supabase
               .from("products")
-              .update({ quantity_in_stock: Math.max(0, newQuantity) })
-              .eq("id", productId);
+              .insert([
+                {
+                  name: item.item_name,
+                  sku: `SKU-${Date.now()}`,
+                  category: "general",
+                  unit_price: parseFloat(item.price_per_item),
+                  current_stock: 0,
+                  minimum_stock: 10,
+                },
+              ])
+              .select()
+              .maybeSingle();
+
+            if (productError) throw productError;
+            productId = newProduct?.id;
+          }
+
+          if (item.deduct_stock && productId) {
+            await supabase.from("stock_movements").insert([
+              {
+                product_id: productId,
+                movement_type: "out",
+                quantity: parseInt(item.quantity),
+                reference_type: "invoice",
+                reference_id: invoice.id,
+                notes: `Invoice ${invoiceNumber}`,
+              },
+            ]);
           }
         }
       }
     },
     onSuccess: () => {
-      toast({ title: t("invoices.title") + " created successfully" });
+      toast({ title: "Invoice created successfully" });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       onClose();
     },
     onError: (error: any) => {
-      toast({ 
-        title: "Failed to create invoice", 
+      toast({
+        title: "Failed to create invoice",
         description: error.message,
-        variant: "destructive" 
+        variant: "destructive"
       });
     },
   });
@@ -180,12 +196,32 @@ export function InvoiceForm({ onClose }: InvoiceFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone_number">{t("invoices.phoneNumber")}</Label>
-              <Input
-                id="phone_number"
-                {...register("phone_number", { required: true })}
-                placeholder={t("invoices.phoneNumber")}
+              <Label>Invoice Image</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
               />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {imageFile ? "Change Image" : "Upload Image"}
+              </Button>
+              {imagePreview && (
+                <div className="mt-2 relative">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-full h-32 object-cover rounded-lg"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
