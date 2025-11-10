@@ -85,6 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      if (data.status === "pending") {
+        toast.error("Sua conta está aguardando aprovação de um gerente.");
+        await signOut();
+        return;
+      }
+
       console.log('[AuthContext] ✅ Profile loaded:', {
         email: data.email,
         role: data.role,
