@@ -45,7 +45,7 @@ export default function Dashboard() {
     },
   });
 
-  const lowStockCount = products?.filter(p => p.quantity_in_stock < p.threshold).length || 0;
+  const lowStockCount = products?.filter(p => p.current_stock < p.minimum_stock).length || 0;
   
   const expiringItems = products?.filter(p => {
     if (!p.expiration_date) return false;

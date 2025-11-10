@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -14,28 +12,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 type UserRole = "manager" | "supervisor" | "staff" | "pending";
+type UserStatus = "active" | "pending" | "inactive";
 
-interface UserWithRole {
+interface UserProfile {
   id: string;
   email: string;
   full_name: string | null;
   avatar_url: string | null;
   created_at: string;
   role: UserRole;
+  status: UserStatus;
 }
 
 export default function Users() {
-  const { userRole, user } = useAuth();
+  const { profile, user } = useAuth();
   const { t } = useTranslation();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  if (userRole !== "manager") {
+  if (profile?.role !== "manager") {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card>
@@ -50,55 +49,33 @@ export default function Users() {
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      const { data: profiles, error: profilesError } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (profilesError) throw profilesError;
-
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("*");
-
-      if (rolesError) throw rolesError;
-
-      const usersWithRoles: UserWithRole[] = profiles.map((profile) => {
-        const userRole = roles.find((r) => r.user_id === profile.id);
-        return {
-          ...profile,
-          role: (userRole?.role as UserRole) || "pending" as UserRole,
-        };
-      });
-
-      return usersWithRoles;
+      if (error) throw error;
+      return data as UserProfile[];
     },
   });
 
-  const pendingUsers = users?.filter((u) => u.role === "pending");
+  const pendingUsers = users?.filter((u) => u.status === "pending");
 
-  const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, newRole }: { userId: string; newRole: UserRole }) => {
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<UserProfile> }) => {
       const { error } = await supabase
-        .from("user_roles")
-        .update({ role: newRole as "manager" | "supervisor" | "staff" })
-        .eq("user_id", userId);
+        .from("profiles")
+        .update(updates)
+        .eq("id", userId);
 
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      toast({
-        title: "Função atualizada",
-        description: "A função do usuário foi atualizada com sucesso",
-      });
+      toast.success(t("users.userUpdated"));
     },
     onError: (error: any) => {
-      toast({
-        title: "Erro ao atualizar função",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error(error.message);
     },
   });
 
@@ -123,7 +100,7 @@ export default function Users() {
       </div>
 
       {pendingUsers && pendingUsers.length > 0 && (
-        <Card className="border-warning">
+        <Card className="border-orange-500">
           <CardHeader>
             <CardTitle>Usuários Pendentes de Aprovação</CardTitle>
             <CardDescription>
@@ -146,27 +123,32 @@ export default function Users() {
                       <p className="text-sm text-muted-foreground">{u.email}</p>
                     </div>
                   </div>
-                  <Select
-                    value="pending"
-                    onValueChange={(value: UserRole) =>
-                      updateRoleMutation.mutate({ userId: u.id, newRole: value })
-                    }
-                  >
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Aprovar como..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="manager">
-                        {t("users.roles.manager")}
-                      </SelectItem>
-                      <SelectItem value="supervisor">
-                        {t("users.roles.supervisor")}
-                      </SelectItem>
-                      <SelectItem value="staff">
-                        {t("users.roles.staff")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select
+                      value={u.role}
+                      onValueChange={(value: UserRole) =>
+                        updateUserMutation.mutate({
+                          userId: u.id,
+                          updates: { role: value, status: 'active' }
+                        })
+                      }
+                    >
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Aprovar como..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="manager">
+                          {t("users.roles.manager")}
+                        </SelectItem>
+                        <SelectItem value="supervisor">
+                          {t("users.roles.supervisor")}
+                        </SelectItem>
+                        <SelectItem value="staff">
+                          {t("users.roles.staff")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               ))}
             </div>
@@ -220,27 +202,53 @@ export default function Users() {
                     </TableCell>
                     <TableCell>
                       {userItem.id !== user?.id && (
-                        <Select
-                          value={userItem.role}
-                          onValueChange={(value: UserRole) =>
-                            updateRoleMutation.mutate({ userId: userItem.id, newRole: value })
-                          }
-                        >
-                          <SelectTrigger className="w-[150px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="manager">
-                              {t("users.roles.manager")}
-                            </SelectItem>
-                            <SelectItem value="supervisor">
-                              {t("users.roles.supervisor")}
-                            </SelectItem>
-                            <SelectItem value="staff">
-                              {t("users.roles.staff")}
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="flex gap-2">
+                          <Select
+                            value={userItem.role}
+                            onValueChange={(value: UserRole) =>
+                              updateUserMutation.mutate({
+                                userId: userItem.id,
+                                updates: { role: value }
+                              })
+                            }
+                          >
+                            <SelectTrigger className="w-[130px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="manager">
+                                {t("users.roles.manager")}
+                              </SelectItem>
+                              <SelectItem value="supervisor">
+                                {t("users.roles.supervisor")}
+                              </SelectItem>
+                              <SelectItem value="staff">
+                                {t("users.roles.staff")}
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={userItem.status}
+                            onValueChange={(value: UserStatus) =>
+                              updateUserMutation.mutate({
+                                userId: userItem.id,
+                                updates: { status: value }
+                              })
+                            }
+                          >
+                            <SelectTrigger className="w-[120px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">
+                                {t("users.statuses.active")}
+                              </SelectItem>
+                              <SelectItem value="inactive">
+                                {t("users.statuses.inactive")}
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>

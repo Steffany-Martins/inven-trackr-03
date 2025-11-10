@@ -26,13 +26,13 @@ export function NotificationsDropdown() {
         supabase
           .from("low_stock_alerts")
           .select("*, products(name)")
-          .eq("resolved", false)
+          .eq("status", "active")
           .order("created_at", { ascending: false })
           .limit(10),
         supabase
           .from("fraud_alerts")
           .select("*")
-          .eq("resolved", false)
+          .eq("status", "pending")
           .order("created_at", { ascending: false })
           .limit(5),
       ]);
@@ -53,7 +53,7 @@ export function NotificationsDropdown() {
       const table = type === "low_stock" ? "low_stock_alerts" : "fraud_alerts";
       const { error } = await supabase
         .from(table)
-        .update({ resolved: true, resolved_at: new Date().toISOString() })
+        .update({ status: type === 'low_stock' ? 'resolved' : 'reviewed', resolved_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
     },
@@ -111,7 +111,7 @@ export function NotificationsDropdown() {
                 </Badge>
               </div>
               <span className="text-sm text-muted-foreground">
-                {alert.products?.name}: {alert.current_quantity} unidades
+                {alert.products?.name}: {alert.current_stock} unidades
               </span>
               <span className="text-xs text-muted-foreground">
                 {format(new Date(alert.created_at), "dd/MM/yyyy HH:mm")}

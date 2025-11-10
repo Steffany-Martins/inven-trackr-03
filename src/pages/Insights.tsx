@@ -61,7 +61,7 @@ export default function Insights() {
       const { data, error } = await supabase
         .from("low_stock_alerts")
         .select("*, products(name, unit_price)")
-        .eq("resolved", false)
+        .eq("status", "active")
         .order("severity", { ascending: false });
       if (error) throw error;
       return data;
@@ -74,7 +74,7 @@ export default function Insights() {
       const { data, error } = await supabase
         .from("fraud_alerts")
         .select("*")
-        .eq("resolved", false)
+        .eq("status", "pending")
         .order("severity", { ascending: false });
       if (error) throw error;
       return data;
@@ -109,8 +109,7 @@ export default function Insights() {
     .slice(0, 5);
 
   const stagnantProducts = products?.filter((p) => {
-    // Simplified check - in production would check stock_movements
-    return p.quantity_in_stock > p.threshold * 3;
+    return p.current_stock > p.minimum_stock * 3;
   });
 
   const generateInsights = async () => {
@@ -123,9 +122,9 @@ export default function Insights() {
         invoices,
         summary: {
           totalProducts: products?.length || 0,
-          lowStockProducts: products?.filter(p => p.quantity_in_stock < p.threshold).length || 0,
+          lowStockProducts: products?.filter(p => p.current_stock < p.minimum_stock).length || 0,
           totalPurchaseOrders: purchaseOrders?.length || 0,
-          pendingOrders: purchaseOrders?.filter(o => o.delivery_status === 'pending').length || 0,
+          pendingOrders: purchaseOrders?.filter(o => o.status === 'pending').length || 0,
           totalInvoices: invoices?.length || 0,
         }
       };
@@ -244,7 +243,7 @@ export default function Insights() {
               {lowStockAlerts?.slice(0, 5).map((alert: any) => (
                 <div key={alert.id} className="flex justify-between items-center">
                   <span className="font-medium">{alert.products?.name}</span>
-                  <Badge variant="destructive">{alert.current_quantity} un.</Badge>
+                  <Badge variant="destructive">{alert.current_stock} un.</Badge>
                 </div>
               ))}
             </div>
