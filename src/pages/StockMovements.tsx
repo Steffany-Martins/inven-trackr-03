@@ -35,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { exportToExcel } from "@/utils/exportExcel";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function StockMovements() {
   const { t } = useTranslation();
@@ -42,6 +43,7 @@ export default function StockMovements() {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [formData, setFormData] = useState({
     product_id: "",
     quantity: 0,
@@ -56,12 +58,16 @@ export default function StockMovements() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stock_movements")
-        .select("*, products(name)")
+        .select("*, products(name, category)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
+
+  const filteredMovements = categoryFilter === "all"
+    ? movements
+    : movements?.filter(m => m.products?.category?.toLowerCase() === categoryFilter);
 
   const { data: products } = useQuery({
     queryKey: ["products"],
@@ -108,10 +114,11 @@ export default function StockMovements() {
   });
 
   const handleExport = () => {
-    if (!movements) return;
-    const exportData = movements.map((m) => ({
+    if (!filteredMovements) return;
+    const exportData = filteredMovements.map((m) => ({
       Data: format(new Date(m.created_at), "dd/MM/yyyy HH:mm"),
       Produto: m.products?.name,
+      Categoria: m.products?.category,
       Tipo: m.movement_type,
       Quantidade: m.quantity,
       Observações: m.notes || "",
@@ -228,9 +235,38 @@ export default function StockMovements() {
         </div>
       </div>
 
+      <Tabs value={categoryFilter} onValueChange={setCategoryFilter} className="w-full">
+        <TabsList className="w-full justify-start bg-warning/20 border-b rounded-none h-auto p-0">
+          <TabsTrigger
+            value="all"
+            className="rounded-none data-[state=active]:bg-warning data-[state=active]:text-warning-foreground px-8 py-3"
+          >
+            Todas Categorias
+          </TabsTrigger>
+          <TabsTrigger
+            value="padaria"
+            className="rounded-none data-[state=active]:bg-warning data-[state=active]:text-warning-foreground px-8 py-3"
+          >
+            Padaria
+          </TabsTrigger>
+          <TabsTrigger
+            value="restaurante"
+            className="rounded-none data-[state=active]:bg-warning data-[state=active]:text-warning-foreground px-8 py-3"
+          >
+            Restaurante
+          </TabsTrigger>
+          <TabsTrigger
+            value="bar"
+            className="rounded-none data-[state=active]:bg-warning data-[state=active]:text-warning-foreground px-8 py-3"
+          >
+            Bar
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <Card>
         <CardHeader>
-          <CardTitle>Histórico de Movimentações</CardTitle>
+          <CardTitle>Em Estoque</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -241,18 +277,20 @@ export default function StockMovements() {
                 <TableRow>
                   <TableHead>Data/Hora</TableHead>
                   <TableHead>Produto</TableHead>
+                  <TableHead>Categoria</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Quantidade</TableHead>
                   <TableHead>Observações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {movements?.map((movement) => (
+                {filteredMovements?.map((movement) => (
                   <TableRow key={movement.id}>
                     <TableCell>
                       {format(new Date(movement.created_at), "dd/MM/yyyy HH:mm")}
                     </TableCell>
                     <TableCell>{movement.products?.name}</TableCell>
+                    <TableCell className="capitalize">{movement.products?.category || "N/A"}</TableCell>
                     <TableCell>{getMovementBadge(movement.movement_type)}</TableCell>
                     <TableCell
                       className={movement.quantity > 0 ? "text-green-600" : "text-red-600"}
