@@ -47,11 +47,7 @@ export default function Products() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select(`
-          *,
-          created_by_profile:profiles!products_created_by_fkey(full_name, email),
-          updated_by_profile:profiles!products_updated_by_fkey(full_name, email)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;

@@ -149,19 +149,34 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     setIsGeneratingImage(true);
     try {
       const query = encodeURIComponent(aiImageQuery);
-      const imageUrl = `https://source.unsplash.com/featured/400x400/?${query},food,product`;
-      setImagePreview(imageUrl);
-      toast({
-        title: "Imagem sugerida",
-        description: "Imagem do Unsplash carregada. Você pode fazer upload se preferir."
-      });
+      const randomSeed = Math.floor(Math.random() * 1000);
+      const imageUrl = `https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop&seed=${randomSeed}`;
+
+      const img = new Image();
+      img.onload = () => {
+        setImagePreview(imageUrl);
+        toast({
+          title: "Imagem sugerida",
+          description: "Imagem carregada. Você pode fazer upload se preferir."
+        });
+        setIsGeneratingImage(false);
+      };
+      img.onerror = () => {
+        const fallbackUrl = "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop";
+        setImagePreview(fallbackUrl);
+        toast({
+          title: "Imagem sugerida",
+          description: "Imagem de exemplo carregada."
+        });
+        setIsGeneratingImage(false);
+      };
+      img.src = imageUrl;
     } catch (error) {
       toast({
         title: "Erro ao gerar imagem",
         description: "Não foi possível gerar a imagem.",
         variant: "destructive"
       });
-    } finally {
       setIsGeneratingImage(false);
     }
   };
@@ -361,11 +376,15 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               </TabsContent>
             </Tabs>
             {imagePreview && (
-              <div className="mt-2 relative w-32 h-32 border rounded overflow-hidden">
+              <div className="mt-2 relative w-32 h-32 border rounded overflow-hidden bg-muted">
                 <img
                   src={imagePreview}
                   alt="Preview"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
                 />
               </div>
             )}
