@@ -2,17 +2,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus } from "lucide-react";
+import { Plus, Download, Search } from "lucide-react";
 import { useState } from "react";
 import { SupplierForm } from "@/components/SupplierForm";
 import { SuppliersTable } from "@/components/SuppliersTable";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { Input } from "@/components/ui/input";
+import { exportToExcel } from "@/utils/exportExcel";
 
 export default function Suppliers() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
@@ -72,28 +75,67 @@ export default function Suppliers() {
     setEditingSupplier(null);
   };
 
+  const filteredSuppliers = suppliers?.filter(supplier => {
+    const search = searchTerm.toLowerCase();
+    return (
+      supplier.name?.toLowerCase().includes(search) ||
+      supplier.cnpj?.toLowerCase().includes(search) ||
+      supplier.phone?.toLowerCase().includes(search) ||
+      supplier.email?.toLowerCase().includes(search)
+    );
+  });
+
+  const handleExport = () => {
+    if (!filteredSuppliers) return;
+    const exportData = filteredSuppliers.map(s => ({
+      CNPJ: s.cnpj || "",
+      Nome: s.name,
+      Telefone: s.phone,
+      Email: s.email || "",
+      Contato: s.contact || "",
+      "Prazo de Entrega (dias)": s.delivery_time_days || "",
+    }));
+    exportToExcel(exportData, "fornecedores", "Fornecedores");
+    toast({ title: "Exportação realizada com sucesso" });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Suppliers</h1>
-          <p className="text-muted-foreground">Manage your supplier contacts</p>
+          <h1 className="text-3xl font-bold tracking-tight">Fornecedores</h1>
+          <p className="text-muted-foreground">Gerencie seus fornecedores</p>
         </div>
-        {canAdd && (
-          <Button onClick={() => setIsFormOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Supplier
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar
           </Button>
-        )}
+          {canAdd && (
+            <Button onClick={() => setIsFormOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Fornecedor
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Suppliers</CardTitle>
+          <CardTitle>Todos os Fornecedores</CardTitle>
+          <div className="relative mt-4">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, CNPJ, telefone ou email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <SuppliersTable
-            suppliers={suppliers || []}
+            suppliers={filteredSuppliers || []}
             isLoading={isLoading}
             onEdit={canEdit ? handleEdit : undefined}
             onDelete={canDelete ? handleDelete : undefined}

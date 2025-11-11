@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { formatCNPJ, validateCNPJ } from "@/utils/cnpjValidator";
 
 interface SupplierFormProps {
   supplier?: any;
@@ -21,7 +23,8 @@ interface SupplierFormProps {
 
 export function SupplierForm({ supplier, onClose, onSuccess }: SupplierFormProps) {
   const { toast } = useToast();
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const [cnpjValue, setCnpjValue] = useState(supplier?.cnpj || "");
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm({
     defaultValues: supplier || {},
   });
 
@@ -51,7 +54,21 @@ export function SupplierForm({ supplier, onClose, onSuccess }: SupplierFormProps
   });
 
   const onSubmit = (data: any) => {
-    mutation.mutate(data);
+    if (!validateCNPJ(cnpjValue)) {
+      toast({
+        title: "CNPJ inválido",
+        description: "Por favor, insira um CNPJ válido",
+        variant: "destructive"
+      });
+      return;
+    }
+    mutation.mutate({ ...data, cnpj: cnpjValue });
+  };
+
+  const handleCNPJChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCNPJ(e.target.value);
+    setCnpjValue(formatted);
+    setValue("cnpj", formatted);
   };
 
   return (
@@ -62,11 +79,23 @@ export function SupplierForm({ supplier, onClose, onSuccess }: SupplierFormProps
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Supplier Name</Label>
+            <Label htmlFor="cnpj">CNPJ *</Label>
+            <Input
+              id="cnpj"
+              value={cnpjValue}
+              onChange={handleCNPJChange}
+              placeholder="00.000.000/0000-00"
+              maxLength={18}
+            />
+            <p className="text-xs text-muted-foreground">Formato: 00.000.000/0000-00</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome do Fornecedor *</Label>
             <Input
               id="name"
-              {...register("name", { required: "Name is required" })}
-              placeholder="Enter supplier name"
+              {...register("name", { required: "Nome é obrigatório" })}
+              placeholder="Digite o nome do fornecedor"
             />
             {errors.name && (
               <p className="text-sm text-destructive">{errors.name.message as string}</p>
@@ -74,11 +103,11 @@ export function SupplierForm({ supplier, onClose, onSuccess }: SupplierFormProps
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
+            <Label htmlFor="phone">Telefone *</Label>
             <Input
               id="phone"
-              {...register("phone", { required: "Phone is required" })}
-              placeholder="Enter phone number"
+              {...register("phone", { required: "Telefone é obrigatório" })}
+              placeholder="(00) 00000-0000"
             />
             {errors.phone && (
               <p className="text-sm text-destructive">{errors.phone.message as string}</p>
@@ -96,20 +125,32 @@ export function SupplierForm({ supplier, onClose, onSuccess }: SupplierFormProps
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contact">Contact Person</Label>
+            <Label htmlFor="contact">Pessoa de Contato</Label>
             <Input
               id="contact"
               {...register("contact")}
-              placeholder="Enter contact person name"
+              placeholder="Nome da pessoa de contato"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="delivery_time_days">Prazo de Entrega (dias)</Label>
+            <Input
+              id="delivery_time_days"
+              type="number"
+              min="0"
+              {...register("delivery_time_days")}
+              placeholder="Ex: 7"
+            />
+            <p className="text-xs text-muted-foreground">Tempo médio de entrega em dias úteis</p>
           </div>
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Saving..." : "Save"}
+              {mutation.isPending ? "Salvando..." : "Salvar"}
             </Button>
           </div>
         </form>

@@ -8,12 +8,13 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface SuppliersTableProps {
   suppliers: any[];
   isLoading: boolean;
-  onEdit: (supplier: any) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (supplier: any) => void;
+  onDelete?: (id: string) => void;
 }
 
 export function SuppliersTable({
@@ -23,13 +24,13 @@ export function SuppliersTable({
   onDelete,
 }: SuppliersTableProps) {
   if (isLoading) {
-    return <div className="text-center py-8">Loading suppliers...</div>;
+    return <div className="text-center py-8">Carregando fornecedores...</div>;
   }
 
   if (suppliers.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        No suppliers found. Add your first supplier to get started.
+        Nenhum fornecedor encontrado. Adicione seu primeiro fornecedor para começar.
       </div>
     );
   }
@@ -38,40 +39,54 @@ export function SuppliersTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Phone Number</TableHead>
-          <TableHead>Address</TableHead>
-          <TableHead>Added</TableHead>
-          <TableHead>Actions</TableHead>
+          <TableHead>CNPJ</TableHead>
+          <TableHead>Nome</TableHead>
+          <TableHead>Telefone</TableHead>
+          <TableHead>Email</TableHead>
+          <TableHead>Contato</TableHead>
+          <TableHead>Prazo Entrega</TableHead>
+          {(onEdit || onDelete) && <TableHead>Ações</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
         {suppliers.map((supplier) => (
           <TableRow key={supplier.id}>
+            <TableCell className="font-mono text-sm">{supplier.cnpj || "-"}</TableCell>
             <TableCell className="font-medium">{supplier.name}</TableCell>
-            <TableCell>{supplier.phone_number}</TableCell>
-            <TableCell>{supplier.address}</TableCell>
+            <TableCell>{supplier.phone || "-"}</TableCell>
+            <TableCell>{supplier.email || "-"}</TableCell>
+            <TableCell>{supplier.contact || "-"}</TableCell>
             <TableCell>
-              {new Date(supplier.created_at).toLocaleDateString()}
+              {supplier.delivery_time_days ? (
+                <Badge variant="secondary">{supplier.delivery_time_days} dias</Badge>
+              ) : (
+                "-"
+              )}
             </TableCell>
-            <TableCell>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onEdit(supplier)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onDelete(supplier.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
+            {(onEdit || onDelete) && (
+              <TableCell>
+                <div className="flex gap-2">
+                  {onEdit && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit(supplier)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {onDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(supplier.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            )}
           </TableRow>
         ))}
       </TableBody>

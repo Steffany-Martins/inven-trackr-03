@@ -148,35 +148,30 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
 
     setIsGeneratingImage(true);
     try {
-      const query = encodeURIComponent(aiImageQuery);
-      const randomSeed = Math.floor(Math.random() * 1000);
-      const imageUrl = `https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop&seed=${randomSeed}`;
+      const query = encodeURIComponent(aiImageQuery.toLowerCase());
 
-      const img = new Image();
-      img.onload = () => {
-        setImagePreview(imageUrl);
-        toast({
-          title: "Imagem sugerida",
-          description: "Imagem carregada. Você pode fazer upload se preferir."
-        });
-        setIsGeneratingImage(false);
-      };
-      img.onerror = () => {
-        const fallbackUrl = "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop";
-        setImagePreview(fallbackUrl);
-        toast({
-          title: "Imagem sugerida",
-          description: "Imagem de exemplo carregada."
-        });
-        setIsGeneratingImage(false);
-      };
-      img.src = imageUrl;
+      const foodImages = [
+        "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop",
+        "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=400&fit=crop",
+        "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=400&fit=crop",
+        "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=400&fit=crop",
+        "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400&fit=crop",
+      ];
+
+      const randomUrl = foodImages[Math.floor(Math.random() * foodImages.length)];
+
+      setImagePreview(randomUrl);
+      toast({
+        title: "Imagem sugerida",
+        description: "Imagem carregada. Você pode fazer upload de sua própria imagem."
+      });
     } catch (error) {
       toast({
         title: "Erro ao gerar imagem",
         description: "Não foi possível gerar a imagem.",
         variant: "destructive"
       });
+    } finally {
       setIsGeneratingImage(false);
     }
   };

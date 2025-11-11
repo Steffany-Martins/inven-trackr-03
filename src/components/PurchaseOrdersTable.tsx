@@ -7,103 +7,113 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Database } from "@/integrations/supabase/types";
-
-type DeliveryStatus = Database["public"]["Enums"]["delivery_status"];
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2, RefreshCw } from "lucide-react";
+import { format } from "date-fns";
 
 interface PurchaseOrdersTableProps {
-  orders: any[];
+  purchaseOrders: any[];
   isLoading: boolean;
-  onUpdateStatus: (id: string, status: DeliveryStatus) => void;
+  onEdit?: (order: any) => void;
+  onDelete?: (id: string) => void;
+  onReorder?: (order: any) => void;
 }
 
 export function PurchaseOrdersTable({
-  orders,
+  purchaseOrders,
   isLoading,
-  onUpdateStatus,
+  onEdit,
+  onDelete,
+  onReorder,
 }: PurchaseOrdersTableProps) {
   if (isLoading) {
-    return <div className="text-center py-8">Loading orders...</div>;
+    return <div className="text-center py-8">Carregando pedidos...</div>;
   }
 
-  if (orders.length === 0) {
+  if (purchaseOrders.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        No purchase orders found. Create your first order to get started.
+        Nenhum pedido encontrado. Crie seu primeiro pedido para começar.
       </div>
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "delivered":
-        return "bg-success";
-      case "in_transit":
-        return "bg-warning";
-      case "cancelled":
-        return "bg-destructive";
-      default:
-        return "bg-muted";
-    }
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, any> = {
+      pending: "secondary",
+      confirmed: "default",
+      delivered: "default",
+      cancelled: "destructive",
+    };
+    return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
   };
 
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Product</TableHead>
-          <TableHead>Supplier</TableHead>
-          <TableHead>Quantity</TableHead>
-          <TableHead>Price</TableHead>
+          <TableHead>Número do Pedido</TableHead>
+          <TableHead>Data do Pedido</TableHead>
+          <TableHead>Previsão de Entrega</TableHead>
+          <TableHead>Valor Total</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Delivery Date</TableHead>
-          <TableHead>Created</TableHead>
+          <TableHead>Itens</TableHead>
+          {(onEdit || onDelete || onReorder) && <TableHead>Ações</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
-        {orders.map((order) => (
+        {purchaseOrders.map((order) => (
           <TableRow key={order.id}>
-            <TableCell className="font-medium">
-              {order.products?.name || "N/A"}
-            </TableCell>
-            <TableCell>{order.suppliers?.name || "N/A"}</TableCell>
-            <TableCell>{order.quantity}</TableCell>
-            <TableCell>${Number(order.price).toFixed(2)}</TableCell>
+            <TableCell className="font-medium font-mono">{order.order_number}</TableCell>
             <TableCell>
-              <Select
-                value={order.delivery_status}
-                onValueChange={(value) => onUpdateStatus(order.id, value as DeliveryStatus)}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue>
-                    <Badge className={getStatusColor(order.delivery_status)}>
-                      {order.delivery_status.replace("_", " ")}
-                    </Badge>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_transit">In Transit</SelectItem>
-                  <SelectItem value="delivered">Delivered</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+              {order.order_date ? format(new Date(order.order_date), "dd/MM/yyyy") : "-"}
             </TableCell>
             <TableCell>
-              {order.delivery_date
-                ? new Date(order.delivery_date).toLocaleDateString()
-                : "Not set"}
+              {order.expected_delivery
+                ? format(new Date(order.expected_delivery), "dd/MM/yyyy")
+                : "-"}
             </TableCell>
+            <TableCell>R$ {order.total_value?.toFixed(2) || "0.00"}</TableCell>
+            <TableCell>{getStatusBadge(order.status)}</TableCell>
             <TableCell>
-              {new Date(order.created_at).toLocaleDateString()}
+              <Badge variant="outline">{order.purchase_order_items?.length || 0} itens</Badge>
             </TableCell>
+            {(onEdit || onDelete || onReorder) && (
+              <TableCell>
+                <div className="flex gap-2">
+                  {onReorder && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onReorder(order)}
+                      title="Refazer pedido"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {onEdit && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit(order)}
+                      title="Editar"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {onDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(order.id)}
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            )}
           </TableRow>
         ))}
       </TableBody>
