@@ -26,8 +26,8 @@ export function NotificationsDropdown() {
         supabase
           .from("low_stock_alerts")
           .select("*, products(name)")
-          .eq("status", "active")
-          .order("created_at", { ascending: false })
+          .eq("acknowledged", false)
+          .order("sent_at", { ascending: false })
           .limit(10),
         supabase
           .from("fraud_alerts")
@@ -37,15 +37,15 @@ export function NotificationsDropdown() {
           .limit(5),
       ]);
 
-      if (lowStock.error) throw lowStock.error;
-      if (fraud.error) throw fraud.error;
+      if (lowStock.error) console.error("Low stock error:", lowStock.error);
+      if (fraud.error) console.error("Fraud error:", fraud.error);
 
       return {
         lowStock: lowStock.data || [],
         fraud: fraud.data || [],
       };
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
   const resolveAlertMutation = useMutation({
@@ -53,7 +53,7 @@ export function NotificationsDropdown() {
       if (type === "low_stock") {
         const { error } = await supabase
           .from("low_stock_alerts")
-          .update({ status: 'resolved', resolved_at: new Date().toISOString() })
+          .update({ acknowledged: true, acknowledged_at: new Date().toISOString() })
           .eq("id", id);
         if (error) throw error;
       } else {
@@ -113,15 +113,15 @@ export function NotificationsDropdown() {
             >
               <div className="flex items-center justify-between w-full">
                 <span className="font-medium">Estoque Baixo</span>
-                <Badge variant={getSeverityColor(alert.severity)}>
-                  {alert.severity}
+                <Badge variant="destructive">
+                  {alert.alert_type || "Alerta"}
                 </Badge>
               </div>
               <span className="text-sm text-muted-foreground">
-                {alert.products?.name}: {alert.current_stock} unidades
+                {alert.products?.name}
               </span>
               <span className="text-xs text-muted-foreground">
-                {format(new Date(alert.created_at), "dd/MM/yyyy HH:mm")}
+                {alert.sent_at && format(new Date(alert.sent_at), "dd/MM/yyyy HH:mm")}
               </span>
             </DropdownMenuItem>
           ))}
