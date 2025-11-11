@@ -58,7 +58,11 @@ export default function StockMovements() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stock_movements")
-        .select("*, products(name, category)")
+        .select(`
+          *,
+          products(name, category),
+          profiles!stock_movements_user_id_fkey(full_name, email)
+        `)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -120,8 +124,9 @@ export default function StockMovements() {
       Produto: m.products?.name,
       Categoria: m.products?.category,
       Tipo: m.movement_type,
-      Quantidade: m.quantity,
-      Observações: m.notes || "",
+      Quantidade: m.quantity_change,
+      Usuário: m.profiles?.full_name || m.profiles?.email || "Sistema",
+      Observações: m.reason || m.notes || "",
     }));
     exportToExcel(exportData, "movimentacoes-estoque", "Movimentações de Estoque");
     toast({ title: "Exportação realizada com sucesso" });
@@ -280,6 +285,7 @@ export default function StockMovements() {
                   <TableHead>Categoria</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Quantidade</TableHead>
+                  <TableHead>Usuário</TableHead>
                   <TableHead>Observações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -293,12 +299,15 @@ export default function StockMovements() {
                     <TableCell className="capitalize">{movement.products?.category || "N/A"}</TableCell>
                     <TableCell>{getMovementBadge(movement.movement_type)}</TableCell>
                     <TableCell
-                      className={movement.quantity > 0 ? "text-green-600" : "text-red-600"}
+                      className={movement.quantity_change > 0 ? "text-green-600" : "text-red-600"}
                     >
-                      {movement.quantity > 0 ? "+" : ""}
-                      {movement.quantity}
+                      {movement.quantity_change > 0 ? "+" : ""}
+                      {movement.quantity_change}
                     </TableCell>
-                    <TableCell>{movement.notes}</TableCell>
+                    <TableCell>
+                      {movement.profiles?.full_name || movement.profiles?.email || "Sistema"}
+                    </TableCell>
+                    <TableCell>{movement.reason || movement.notes || "-"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

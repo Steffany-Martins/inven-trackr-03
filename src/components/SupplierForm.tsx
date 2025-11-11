@@ -74,28 +74,34 @@ export function SupplierForm({ supplier, onClose, onSuccess }: SupplierFormProps
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone_number">Phone Number</Label>
+            <Label htmlFor="phone">Phone Number</Label>
             <Input
-              id="phone_number"
-              {...register("phone_number", { required: "Phone is required" })}
+              id="phone"
+              {...register("phone", { required: "Phone is required" })}
               placeholder="Enter phone number"
             />
-            {errors.phone_number && (
-              <p className="text-sm text-destructive">{errors.phone_number.message as string}</p>
+            {errors.phone && (
+              <p className="text-sm text-destructive">{errors.phone.message as string}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Textarea
-              id="address"
-              {...register("address", { required: "Address is required" })}
-              placeholder="Enter supplier address"
-              rows={3}
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              {...register("email")}
+              placeholder="Enter supplier email"
             />
-            {errors.address && (
-              <p className="text-sm text-destructive">{errors.address.message as string}</p>
-            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="contact">Contact Person</Label>
+            <Input
+              id="contact"
+              {...register("contact")}
+              placeholder="Enter contact person name"
+            />
           </div>
 
           <div className="flex justify-end gap-2">

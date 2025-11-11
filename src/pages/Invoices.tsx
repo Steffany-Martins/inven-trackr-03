@@ -26,7 +26,11 @@ export default function Invoices() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
-        .select("*")
+        .select(`
+          *,
+          created_by_profile:profiles!invoices_created_by_fkey(full_name, email),
+          updated_by_profile:profiles!invoices_updated_by_fkey(full_name, email)
+        `)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
