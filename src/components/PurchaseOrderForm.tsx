@@ -48,23 +48,48 @@ export function PurchaseOrderForm({ onClose, onSuccess }: PurchaseOrderFormProps
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
-      const { error } = await supabase.from("purchase_orders").insert([
-        {
-          product_id: data.product_id,
+      const supplier = suppliers?.find(s => s.id === data.supplier_id);
+
+      const orderNumber = `PO-${Date.now()}`;
+      const totalValue = parseFloat(data.price);
+
+      const { data: orderData, error: orderError } = await supabase
+        .from("purchase_orders")
+        .insert([{
+          order_number: orderNumber,
           supplier_id: data.supplier_id,
+          supplier_name: supplier?.name || '',
+          order_date: new Date().toISOString().split('T')[0],
+          expected_delivery: data.delivery_date || null,
+          total_value: totalValue,
+          status: 'pending',
+        }])
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      const { error: itemError } = await supabase
+        .from("purchase_order_items")
+        .insert([{
+          purchase_order_id: orderData.id,
+          product_id: data.product_id,
           quantity: parseInt(data.quantity),
-          price: parseFloat(data.price),
-          delivery_date: data.delivery_date || null,
-        },
-      ]);
-      if (error) throw error;
+          unit_price: totalValue / parseInt(data.quantity),
+        }]);
+
+      if (itemError) throw itemError;
     },
     onSuccess: () => {
-      toast({ title: "Purchase order created successfully" });
+      toast({ title: "Pedido de compra criado com sucesso" });
       onSuccess();
     },
-    onError: () => {
-      toast({ title: "Failed to create purchase order", variant: "destructive" });
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao criar pedido",
+        description: error.message,
+        variant: "destructive"
+      });
     },
   });
 

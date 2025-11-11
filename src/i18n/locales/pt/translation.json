@@ -120,10 +120,16 @@
     "fullName": "Nome Completo",
     "role": "Função",
     "createdAt": "Criado em",
+    "userUpdated": "Usuário atualizado com sucesso",
     "roles": {
       "manager": "Gerente",
       "supervisor": "Supervisor",
       "staff": "Equipe",
+      "pending": "Pendente"
+    },
+    "statuses": {
+      "active": "Ativo",
+      "inactive": "Inativo",
       "pending": "Pendente"
     },
     "changeRole": "Alterar Função"

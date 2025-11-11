@@ -93,6 +93,17 @@ export default function Users() {
     }
   };
 
+  const getStatusBadgeVariant = (status: UserStatus): "default" | "secondary" | "outline" | "destructive" => {
+    switch (status) {
+      case "active":
+        return "default";
+      case "inactive":
+        return "destructive";
+      case "pending":
+        return "secondary";
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -174,6 +185,7 @@ export default function Users() {
                   <TableHead>Usuário</TableHead>
                   <TableHead>{t("users.email")}</TableHead>
                   <TableHead>{t("users.role")}</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>{t("users.createdAt")}</TableHead>
                   <TableHead>{t("common.actions")}</TableHead>
                 </TableRow>
@@ -196,6 +208,11 @@ export default function Users() {
                     <TableCell>
                       <Badge variant={getRoleBadgeVariant(userItem.role)}>
                         {t(`users.roles.${userItem.role}`)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusBadgeVariant(userItem.status)}>
+                        {t(`users.statuses.${userItem.status}`)}
                       </Badge>
                     </TableCell>
                     <TableCell>
