@@ -36,7 +36,7 @@ export default function Insights() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("purchase_orders")
-        .select("*, products(name), suppliers(name)")
+        .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -61,9 +61,12 @@ export default function Insights() {
       const { data, error } = await supabase
         .from("low_stock_alerts")
         .select("*, products(name, unit_price)")
-        .eq("status", "active")
-        .order("severity", { ascending: false });
-      if (error) throw error;
+        .eq("acknowledged", false)
+        .order("sent_at", { ascending: false });
+      if (error) {
+        console.error("Low stock alerts error:", error);
+        return [];
+      }
       return data;
     },
   });
@@ -74,9 +77,12 @@ export default function Insights() {
       const { data, error } = await supabase
         .from("fraud_alerts")
         .select("*")
-        .eq("status", "pending")
-        .order("severity", { ascending: false });
-      if (error) throw error;
+        .eq("resolved", false)
+        .order("created_at", { ascending: false });
+      if (error) {
+        console.error("Fraud alerts error:", error);
+        return [];
+      }
       return data;
     },
   });

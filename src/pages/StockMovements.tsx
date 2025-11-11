@@ -48,7 +48,7 @@ export default function StockMovements() {
     product_id: "",
     quantity: 0,
     movement_type: "adjustment",
-    notes: "",
+    reason: "",
   });
 
   const canCreate = profile?.role === "manager" || profile?.role === "supervisor";
@@ -58,14 +58,27 @@ export default function StockMovements() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stock_movements")
-        .select(`
-          *,
-          products(name, category),
-          profiles!stock_movements_user_id_fkey(full_name, email)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+
+      const productIds = [...new Set(data?.map(m => m.product_id))];
+      const { data: productsData } = await supabase
+        .from("products")
+        .select("id, name, category")
+        .in("id", productIds);
+
+      const userIds = [...new Set(data?.filter(m => m.user_id).map(m => m.user_id))];
+      const { data: usersData } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+
+      return data?.map(m => ({
+        ...m,
+        products: productsData?.find(p => p.id === m.product_id),
+        profiles: usersData?.find(u => u.id === m.user_id)
+      }));
     },
   });
 
@@ -87,33 +100,50 @@ export default function StockMovements() {
 
   const createMovementMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const { error } = await supabase.from("stock_movements").insert([data]);
-      if (error) throw error;
-
-      // Update product quantity
       const { data: product } = await supabase
         .from("products")
-        .select("quantity_in_stock")
+        .select("current_stock, quantity")
         .eq("id", data.product_id)
         .single();
 
-      if (product) {
-        const newQuantity = product.quantity_in_stock + data.quantity;
-        await supabase
-          .from("products")
-          .update({ quantity_in_stock: newQuantity })
-          .eq("id", data.product_id);
-      }
+      if (!product) throw new Error("Produto não encontrado");
+
+      const quantityBefore = product.current_stock || product.quantity || 0;
+      const quantityChange = data.quantity;
+      const quantityAfter = quantityBefore + quantityChange;
+
+      const { error } = await supabase.from("stock_movements").insert([{
+        product_id: data.product_id,
+        movement_type: data.movement_type,
+        quantity_before: quantityBefore,
+        quantity_change: quantityChange,
+        quantity_after: quantityAfter,
+        reason: data.reason || "Ajuste manual"
+      }]);
+
+      if (error) throw error;
+
+      await supabase
+        .from("products")
+        .update({
+          current_stock: quantityAfter,
+          quantity: quantityAfter
+        })
+        .eq("id", data.product_id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stock_movements"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast({ title: "Movimento registrado com sucesso" });
       setIsFormOpen(false);
-      setFormData({ product_id: "", quantity: 0, movement_type: "adjustment", notes: "" });
+      setFormData({ product_id: "", quantity: 0, movement_type: "adjustment", reason: "" });
     },
-    onError: () => {
-      toast({ title: "Erro ao registrar movimento", variant: "destructive" });
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao registrar movimento",
+        description: error.message,
+        variant: "destructive"
+      });
     },
   });
 
@@ -126,7 +156,7 @@ export default function StockMovements() {
       Tipo: m.movement_type,
       Quantidade: m.quantity_change,
       Usuário: m.profiles?.full_name || m.profiles?.email || "Sistema",
-      Observações: m.reason || m.notes || "",
+      Observações: m.reason || "",
     }));
     exportToExcel(exportData, "movimentacoes-estoque", "Movimentações de Estoque");
     toast({ title: "Exportação realizada com sucesso" });
@@ -221,9 +251,9 @@ export default function StockMovements() {
                   <div>
                     <Label>Observações</Label>
                     <Textarea
-                      value={formData.notes}
+                      value={formData.reason}
                       onChange={(e) =>
-                        setFormData({ ...formData, notes: e.target.value })
+                        setFormData({ ...formData, reason: e.target.value })
                       }
                     />
                   </div>
@@ -307,7 +337,7 @@ export default function StockMovements() {
                     <TableCell>
                       {movement.profiles?.full_name || movement.profiles?.email || "Sistema"}
                     </TableCell>
-                    <TableCell>{movement.reason || movement.notes || "-"}</TableCell>
+                    <TableCell>{movement.reason || "-"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
